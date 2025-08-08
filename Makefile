@@ -1,19 +1,42 @@
+# Include env file (API keys, DB creds, etc.)
 include .env
 
+# Docker compose helper
+DOCKER_COMPOSE := docker-compose --env-file .env
+
+# dbt settings (adjust if needed)
+DBT_PROJECT_DIR := ecom_analytics
+DBT_PROFILES_DIR := .
+DBT_PROFILE_BRONZE := trino
+DBT_PROFILE_SILVER := spark
+DBT_PROFILE_GOLD := gold
+
+SELECT_BRONZE := bronze
+SELECT_SILVER := silver
+SELECT_GOLD := gold
+
+# Allow overriding to avoid full-refresh on CI or dev
+# Usage:
+#   make run_all            -> uses default: --full-refresh
+#   make run_all FULL_REFRESH=    -> disables full-refresh (incremental mode)
+FULL_REFRESH ?= --full-refresh
+
+.PHONY: build up down restart \
+        to_mysql to_mysql_root to_psql \
+        run_bronze run_external run_silver run_gold run_all \
+        seed install_deps docs select test
+
+# Docker helpers
 build:
-	docker-compose build
+	$(DOCKER_COMPOSE) build
 
 up:
-	docker-compose --env-file .env up -d
+	$(DOCKER_COMPOSE) up -d
 
 down:
-	docker-compose --env-file .env down
+	$(DOCKER_COMPOSE) down
 
-restart:
-	make down && make up
-
-to_mysql:
-	docker exec -it de_mysql mysql --local-infile=1 -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" brazillian_ecommerce
+restart: down up
 
 to_mysql_root:
 	docker exec -it de_mysql mysql -u"root" -p"${MYSQL_ROOT_PASSWORD}"
@@ -21,3 +44,45 @@ to_mysql_root:
 to_psql:
 	docker exec -ti de_psql psql postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
 
+# --------------------------------------
+# dbt orchestration (single project)
+# --------------------------------------
+
+# 1) Stage external objects for Spark (if you have macros that create external tables)
+run_external:
+	dbt run-operation --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROFILES_DIR) --profile $(DBT_PROFILE_SILVER) stage_external_sources
+
+# 2) Bronze: run Bronze models with Trino profile (writes Delta to S3/MinIO)
+run_bronze:
+	dbt build --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROFILES_DIR) --profile $(DBT_PROFILE_BRONZE) --select $(SELECT_BRONZE) $(FULL_REFRESH)
+
+# 3) Silver: run Silver models with Spark profile (reads Bronze Delta -> writes Silver Delta)
+run_silver:
+	dbt build --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROFILES_DIR) --profile $(DBT_PROFILE_SILVER) --select $(SELECT_SILVER) $(FULL_REFRESH)
+
+# 4) Gold: run Gold models (Trino profile pointed at Postgres catalog)
+run_gold:
+	dbt build --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROFILES_DIR) --profile $(DBT_PROFILE_GOLD) --select $(SELECT_GOLD) $(FULL_REFRESH)
+
+# Seed CSVs into Bronze layer (profile=trino so seeds land where Bronze expects them)
+seed:
+	dbt seed --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROFILES_DIR) --profile $(DBT_PROFILE_BRONZE) $(FULL_REFRESH)
+
+# Combined pipeline (keeps same order as before)
+# NOTE: can override FULL_REFRESH empty in CI for incremental runs:
+#   make run_all FULL_REFRESH=""
+run_all: seed run_bronze run_external run_silver run_gold
+
+# doc generation (use spark or whichever profile can see your sources)
+docs:
+	dbt docs generate --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROFILES_DIR) --profile $(DBT_PROFILE_SILVER)
+
+deps:
+	dbt deps --project-dir $(DBT_PROJECT_DIR)
+
+# Run a selected model/script against Spark
+select:
+	dbt run --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROFILES_DIR) --profile $(DBT_PROFILE_SILVER) --select $(script)
+
+test:
+	dbt test --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROFILES_DIR) --profile $(DBT_PROFILE_SILVER)

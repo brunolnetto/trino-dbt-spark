@@ -6,7 +6,7 @@ services:
     image: "mariadb"
     container_name: de_mysql
     volumes:
-      - ./mysql:/var/lib/mysql
+      - ./docker/mysql:/var/lib/mysql
     ports:
       - "3306:3306"
     env_file:
@@ -18,7 +18,7 @@ services:
     image: postgres:15
     container_name: de_psql
     volumes:
-      - ./psql:/var/lib/postgresql/data
+      - ./docker/psql:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     env_file:
@@ -35,7 +35,7 @@ services:
       - "9000:9000"
     command: [ "server", "/data", "--console-address", ":9001" ]
     volumes:
-      - ./minio/data:/data
+      - ./docker/minio/data:/data
     env_file:
       - .env
     networks:
@@ -47,10 +47,12 @@ services:
     image: "bitsondatadev/hive-metastore"
     ports:
       - "9083:9083"
+    env_file:
+      - .env
     volumes:
-      - ./hive-metastore/metastore-site.xml:/opt/apache-hive-metastore-3.0.0-bin/conf/metastore-site.xml:ro
+      - ./docker/hive-metastore/metastore-site.xml:/opt/apache-hive-metastore-3.0.0-bin/conf/metastore-site.xml:ro
     environment:
-      METASTORE_DB_HOSTNAME: de_mysql
+      METASTORE_DB_HOSTNAME: ${MYSQL_HOST}
     networks:
       - data_network
     depends_on:
@@ -64,13 +66,13 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./trino:/etc/trino
+      - ./docker/trino:/etc/trino
     networks:
       - data_network
 
   spark-master:
     build:
-      context: ./spark
+      context: ./docker/spark
       dockerfile: ./Dockerfile
     container_name: "spark-master"
     environment:
@@ -79,7 +81,7 @@ services:
     ports:
       - "7077:7077"
     volumes:
-      - ./spark/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf
+      - ./docker/spark/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf
     networks:
       - data_network
 
@@ -105,7 +107,7 @@ services:
 
   spark-thrift-server:
     build:
-      context: ./spark
+      context: ./docker/spark
       dockerfile: ./Dockerfile
     container_name: "spark-thrift-server"
     depends_on:
@@ -117,7 +119,7 @@ services:
     command: sh -c "
       sleep 10 && ./sbin/start-thriftserver.sh --driver-java-options '-Dhive.metastore.uris=thrift://hive-metastore:9083' --master spark://spark-master:7077"
     volumes:
-      - ./spark/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf
+      - ./docker/spark/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf
     networks:
       - data_network
 

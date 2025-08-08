@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: silver
+    description: "Persisted Silver tables from Spark in S3 via Trino"
+    tables:
+      - name: dim_products
+      - name: fact_sales

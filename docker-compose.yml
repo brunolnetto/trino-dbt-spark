@@ -7,10 +7,11 @@ services:
     container_name: de_mysql
     command: --max_connections=500
     healthcheck:
-      test: CMD-SHELL mysqladmin ping -h 127.0.0.1 -u root -p"$MYSQL_ROOT_PASSWORD" || exit 1
+      test: ["CMD", "mariadb-admin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
     volumes:
       - mysql_data:/var/lib/mysql
     ports:
@@ -24,14 +25,16 @@ services:
     image: postgres:15
     container_name: de_psql
     healthcheck:
-      test: CMD-SHELL pg_isready -U "$POSTGRES_USER"
-      interval: 10s
-      timeout: 5s
-      retries: 5
+        test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+        start_period: 30s
     volumes:
       - psql_data:/var/lib/postgresql/data
+      - ./docker/psql/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT}:5432"
     env_file:
       - .env
     networks:
@@ -58,22 +61,25 @@ services:
       - data_network
 
   hive-metastore:
-    image: apache/hive:4.0.0
+    build:
+      context: ./docker/hive-metastore
+      dockerfile: ./Dockerfile
     container_name: hive-metastore
     hostname: hive-metastore    
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "9083"]
+      test: ["CMD-SHELL", "jps | grep -q 'RunJar'"]
       interval: 10s
       timeout: 5s
       retries: 5
     ports:
       - "9083:9083"
     env_file:
-      - .env
+      - .env 
     volumes:
-      - ./docker/hive-metastore/metastore-site.xml:/opt/apache-hive-metastore-3.0.0-bin/conf/metastore-site.xml:ro
+      - ./docker/hive-metastore/conf:/opt/hive/conf
     environment:
       METASTORE_DB_HOSTNAME: ${MYSQL_HOST}
+      HIVE_CLASSPATH: /opt/hive/lib/mysql-connector-java-8.0.33.jar
     networks:
       - data_network
     depends_on:
@@ -106,6 +112,12 @@ services:
     environment:
       - SPARK_MODE=master
       - SPARK_LOCAL_IP=spark-master
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     ports:
       - "7077:7077"
     volumes:
@@ -113,35 +125,36 @@ services:
     networks:
       - data_network
 
-  spark-worker-1:
+  spark-worker:
     image: docker.io/bitnami/spark:3.3
-    container_name: "spark-worker-1"
     env_file:
       - .env
     volumes:
       - ./docker/spark/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     depends_on:
       - spark-master
     networks:
       - data_network
-
-  spark-worker-2:
-    image: docker.io/bitnami/spark:3.3
-    container_name: "spark-worker-2"
-    env_file:
-      - .env
-    volumes:
-      - ./docker/spark/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf
-    depends_on:
-      - spark-master
-    networks:
-      - data_network
+    deploy:
+      replicas: 2
 
   spark-thrift-server:
     build:
       context: ./docker/spark
       dockerfile: ./Dockerfile
     container_name: "spark-thrift-server"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 10000 || (ps ax | grep -v grep | grep -q org.apache.hive.service.server.HiveServer2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
     depends_on:
       - spark-master
       - hive-metastore
@@ -150,11 +163,6 @@ services:
       - "10000:10000"
     command: >
       sh -c "
-        until nc -z hive-metastore 9083; do
-          echo 'Waiting for hive-metastore:9083...'
-          sleep 2
-        done
-        echo 'Hive Metastore is up - starting Spark Thrift Server'
         ./sbin/start-thriftserver.sh --driver-java-options '-Dhive.metastore.uris=thrift://hive-metastore:9083' --master spark://spark-master:7077
       "
     volumes:
@@ -164,13 +172,24 @@ services:
 
   metabase:
     image: metabase/metabase:latest
-    container_name: "metabase"
+    container_name: metabase
+    hostname: metabase
+    volumes:
+      - /dev/urandom:/dev/random:ro
     ports:
-      - "3000:3000"
+      - 3000:3000
     env_file:
       - .env
     networks:
       - data_network
+    depends_on:
+      de_psql:
+        condition: service_healthy
+    healthcheck:
+      test: curl --fail -I http://localhost:3000/api/health || exit 1
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
 volumes:
   psql_data:

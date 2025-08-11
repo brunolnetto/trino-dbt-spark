@@ -10,4 +10,4 @@ SELECT
     , payment_type
     , payment_installments
     , payment_value
-from {{ source('landing', 'olist_order_payments_dataset') }}
+from {{ source('landing_zone', 'olist_order_payments_dataset') }}

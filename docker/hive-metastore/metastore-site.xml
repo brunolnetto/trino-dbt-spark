@@ -18,7 +18,7 @@
     </property>
     <property>
         <name>javax.jdo.option.ConnectionURL</name>
-        <value>jdbc:mysql://de_mysql:3306/metastore_db</value>
+        <value>jdbc:mysql://de_mysql:3306/hive_metastore?createDatabaseIfNotExist=true</value>
     </property>
     <property>
         <name>javax.jdo.option.ConnectionUserName</name>

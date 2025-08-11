@@ -1,7 +1,7 @@
 version: 2
 
 sources:
-  - name: mysql_src
+  - name: landing_zone
     description: "Raw MySQL tables via Trino"
     tables:
       - name: olist_order_items_dataset

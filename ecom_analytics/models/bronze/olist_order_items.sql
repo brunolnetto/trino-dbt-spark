@@ -14,4 +14,4 @@ SELECT
     , shipping_limit_date
     , price
     , freight_value
-from {{ source('landing', 'olist_order_items_dataset') }}
+from {{ source('landing_zone', 'olist_order_items_dataset') }}

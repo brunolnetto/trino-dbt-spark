@@ -5,20 +5,31 @@ services:
   de_mysql:
     image: "mariadb"
     container_name: de_mysql
+    command: --max_connections=500
+    healthcheck:
+      test: CMD-SHELL mysqladmin ping -h localhost -u root -p"$MYSQL_ROOT_PASSWORD"
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
-      - ./docker/mysql:/var/lib/mysql
+      - mysql_data:/var/lib/mysql
     ports:
       - "3306:3306"
     env_file:
       - .env
     networks:
       - data_network
-
+      
   de_psql:
     image: postgres:15
     container_name: de_psql
+    healthcheck:
+      test: CMD-SHELL pg_isready -U "$POSTGRES_USER"
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
-      - ./docker/psql:/var/lib/postgresql/data
+      - psql_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     env_file:
@@ -34,17 +45,22 @@ services:
       - "9001:9001"
       - "9000:9000"
     command: [ "server", "/data", "--console-address", ":9001" ]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
-      - ./docker/minio/data:/data
+      - minio_data:/data
     env_file:
       - .env
     networks:
       - data_network
 
   hive-metastore:
-    container_name: hive-metastore
-    hostname: hive-metastore
     image: "bitsondatadev/hive-metastore"
+    container_name: hive-metastore
+    hostname: hive-metastore    
     ports:
       - "9083:9083"
     env_file:
@@ -56,12 +72,14 @@ services:
     networks:
       - data_network
     depends_on:
-      - de_mysql
-      - minio
+      de_mysql:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
 
   trino:
-    container_name: trino
     image: "trinodb/trino"
+    container_name: trino
     hostname: trino
     ports:
       - "8080:8080"
@@ -116,8 +134,15 @@ services:
     ports:
       - "4040:4040"
       - "10000:10000"
-    command: sh -c "
-      sleep 10 && ./sbin/start-thriftserver.sh --driver-java-options '-Dhive.metastore.uris=thrift://hive-metastore:9083' --master spark://spark-master:7077"
+    command: >
+      sh -c "
+        until nc -z hive-metastore 9083; do
+          echo 'Waiting for hive-metastore:9083...'
+          sleep 2
+        done
+        echo 'Hive Metastore is up - starting Spark Thrift Server'
+        ./sbin/start-thriftserver.sh --driver-java-options '-Dhive.metastore.uris=thrift://hive-metastore:9083' --master spark://spark-master:7077
+      "
     volumes:
       - ./docker/spark/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf
     networks:
@@ -132,6 +157,11 @@ services:
       - .env
     networks:
       - data_network
+
+volumes:
+  psql_data:
+  mysql_data:
+  minio_data:
 
 networks:
   data_network:

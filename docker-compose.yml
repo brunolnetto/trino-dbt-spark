@@ -7,7 +7,7 @@ services:
     container_name: de_mysql
     command: --max_connections=500
     healthcheck:
-      test: CMD-SHELL mysqladmin ping -h localhost -u root -p"$MYSQL_ROOT_PASSWORD"
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$MYSQL_ROOT_PASSWORD"]
       interval: 10s
       timeout: 5s
       retries: 5

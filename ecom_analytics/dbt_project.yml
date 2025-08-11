@@ -43,7 +43,7 @@ models:
     +incremental_strategy: merge
     +file_format: delta
     +pre_hook:
-      - "SET spark.hadoop.fs.s3a.endpoint=http://minio:9000
+      - "SET spark.hadoop.fs.s3a.endpoint={{ env_var('MINIO_URL') }}
       - "SET spark.hadoop.fs.s3a.access.key={{ env_var('MINIO_ACCESS_KEY') }}"
       - "SET spark.hadoop.fs.s3a.secret.key={{ env_var('MINIO_SECRET_KEY') }}"
       - SET spark.hadoop.fs.s3a.path.style.access=true

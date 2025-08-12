@@ -48,19 +48,15 @@ to_psql:
 # dbt orchestration (single project)
 # --------------------------------------
 
-# 1) Stage external objects for Spark (if you have macros that create external tables)
-run_external:
-	dbt run-operation --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROFILES_DIR) --profile $(DBT_PROFILE_SILVER) stage_external_sources
-
-# 2) Bronze: run Bronze models with Trino profile (writes Iceberg to S3/MinIO)
+# 1) Bronze: run Bronze models with Trino profile (writes Iceberg to S3/MinIO)
 run_bronze:
 	dbt build --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROFILES_DIR) --profile $(DBT_PROFILE_BRONZE) --select $(SELECT_BRONZE) $(FULL_REFRESH)
 
-# 3) Silver: run Silver models with Spark profile (reads Bronze Iceberg -> writes Silver Iceberg)
+# 2) Silver: run Silver models with Spark profile (reads Bronze Iceberg -> writes Silver Iceberg)
 run_silver:
 	dbt build --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROFILES_DIR) --profile $(DBT_PROFILE_SILVER) --select $(SELECT_SILVER) $(FULL_REFRESH)
 
-# 4) Gold: run Gold models (Trino profile pointed at Postgres catalog)
+# 3) Gold: run Gold models (Trino profile pointed at Postgres catalog)
 run_gold:
 	dbt build --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROFILES_DIR) --profile $(DBT_PROFILE_GOLD) --select $(SELECT_GOLD) $(FULL_REFRESH)
 

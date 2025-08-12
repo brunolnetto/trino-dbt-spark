@@ -7,6 +7,7 @@ ARG MYSQL_CONNECTOR_VER=8.0.33
 
 WORKDIR /downloads
 
+
 # Download all artifacts in separate layers for better caching
 RUN set -ex; \
     curl -fL "https://archive.apache.org/dist/hive/hive-standalone-metastore-${METASTORE_VERSION}/hive-standalone-metastore-${METASTORE_VERSION}-bin.tar.gz" \
@@ -21,10 +22,10 @@ RUN set -ex; \
     ls -l hadoop.tar.gz
 
 RUN set -ex; \
-    curl -fL "https://repo1.maven.org/maven2/mysql/mysql-connector-java/${MYSQL_CONNECTOR_VER}/mysql-connector-java-${MYSQL_CONNECTOR_VER}.jar" \
-    -o mysql-connector.jar && \
+    curl -fL "https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/${MYSQL_CONNECTOR_VER}/mysql-connector-j-${MYSQL_CONNECTOR_VER}.jar" \
+    -o mysql-connector-j.jar && \
     echo "MySQL connector downloaded successfully" && \
-    ls -l mysql-connector.jar
+    ls -l mysql-connector-j.jar
 
 FROM eclipse-temurin:8-jre
 
@@ -68,7 +69,7 @@ RUN set -ex; \
 
 
 # Set up MySQL connector
-COPY --from=downloads /downloads/mysql-connector.jar ${HIVE_HOME}/lib/mysql-connector-java-${MYSQL_CONNECTOR_VER}.jar
+COPY --from=downloads /downloads/mysql-connector-j.jar ${HIVE_HOME}/lib/mysql-connector-java-${MYSQL_CONNECTOR_VER}.jar
 RUN chmod 644 ${HIVE_HOME}/lib/mysql-connector-java-${MYSQL_CONNECTOR_VER}.jar
 
 # Copy configurations

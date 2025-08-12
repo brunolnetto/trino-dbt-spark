@@ -22,7 +22,7 @@ services:
       start_period: 30s
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./docker/mysql/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+      - ./docker/mysql/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     ports:
       - "3306:3306"
     env_file:

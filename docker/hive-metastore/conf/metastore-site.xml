@@ -1,5 +1,5 @@
 <configuration>
-    <!-- Metastore Configuratio    <!-- Database Authentication -->
+    <!-- Database Authentication -->
     <property>
        <property>
         <name>fs.s3a.impl</name>
@@ -48,7 +48,8 @@
         <name>datanucleus.autoCreateTables</name>
         <value>true</value>
     </property>
-</configuration>avax.jdo.option.ConnectionUserName</name>
+    <property>
+        <name>javax.jdo.option.ConnectionUserName</name>
         <value>root</value>
     </property>
     <property>

@@ -1,92 +1,90 @@
 version: 2
 
+models:
+  - name: dim_products
+    description: Product dimension table with English category names
+    columns:
+      - name: product_id
+        data_type: string
+        description: Product unique identifier
+        tests:
+          - unique
+          - not_null
+      - name: product_category_name_english
+        data_type: string
+        description: Product category name in English
+        tests:
+          - not_null
+          - valid_category_counts
+
+  - name: fact_sales
+    description: Sales fact table with order details and payments
+    tests:
+      - dbt_utils.equal_rowcount:
+          compare_model: source('bronze', 'olist_order_items')
+      - payment_matches_items
+    columns:
+      - name: order_id
+        data_type: string
+        description: Order unique identifier
+        tests:
+          - not_null
+      - name: customer_id
+        data_type: string
+        description: Customer unique identifier
+        tests:
+          - not_null
+      - name: order_purchase_timestamp
+        data_type: timestamp
+        description: Purchase timestamp
+        tests:
+          - not_null
+          - dbt_utils.is_timestamp
+          - order_dates_are_valid
+      - name: product_id
+        data_type: string
+        description: Product identifier
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_products')
+              field: product_id
+      - name: payment_value
+        data_type: float
+        description: Payment amount
+        tests:
+          - not_null
+          - dbt_utils.positive_value
+          - reasonable_payment_value
+      - name: order_status
+        data_type: string
+        description: Current order status
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['delivered', 'shipped', 'canceled', 'unavailable', 'invoiced', 'processing', 'created', 'approved']
+
 sources:
   - name: bronze
+    description: "Iceberg tables from bronze layer"
     tables:
       - name: olist_products
         external:
           location: 's3a://warehouse/bronze/olist_products'
           using: iceberg
-        columns:
-          - name: product_id
-            data_type: string
-          - name: product_category_name
-            data_type: string
-          - name: product_name_lenght
-            data_type: int
-          - name: product_description_lenght
-            data_type: int
-          - name: product_photos_qty
-            data_type: int
-          - name: product_weight_g
-            data_type: int
-          - name: product_length_cm
-            data_type: int
-          - name: product_height_cm
-            data_type: int
-          - name: product_width_cm
-            data_type: int
-      - name: product_category_name_translation
-        external:
-          location: 's3a://warehouse/bronze/product_category_name_translation'
-          using: iceberg
-        columns:
-          - name: product_category_name
-            data_type: string
-          - name: product_category_name_english
-            data_type: string
-      - name: olist_order_items
-        external:
-          location: 's3a://warehouse/bronze/olist_order_items'
-          using: iceberg
-        columns:
-          - name: order_id
-            data_type: string
-          - name: order_item_id
-            data_type: int
-          - name: product_id
-            data_type: string
-          - name: seller_id
-            data_type: string
-          - name: shipping_limit_date
-            data_type: string
-          - name: price
-            data_type: float
-          - name: freight_value
-            data_type: float
-      - name: olist_order_payments
-        external:
-          location: 's3a://warehouse/bronze/olist_order_payments'
-          using: iceberg
-        columns:
-          - name: order_id
-            data_type: string
-          - name: payment_sequential
-            data_type: int
-          - name: payment_type
-            data_type: string
-          - name: payment_installments
-            data_type: int
-          - name: payment_value
-            data_type: float
       - name: olist_orders
         external:
           location: 's3a://warehouse/bronze/olist_orders'
           using: iceberg
-        columns:
-          - name: order_id
-            data_type: string
-          - name: customer_id
-            data_type: string
-          - name: order_status
-            data_type: string
-          - name: order_purchase_timestamp
-            data_type: string
-          - name: order_approved_at
-            data_type: string
-          - name: order_delivered_carrier_date
-            data_type: string
-          - name: order_delivered_customer_date
-            data_type: string
-          - name: order_estimated_delivery_date
-            data_type: string
+      - name: olist_order_items
+        external:
+          location: 's3a://warehouse/bronze/olist_order_items'
+          using: iceberg
+      - name: olist_order_payments
+        external:
+          location: 's3a://warehouse/bronze/olist_order_payments'
+          using: iceberg
+      - name: product_category_name_translation
+        external:
+          location: 's3a://warehouse/bronze/product_category_name_translation'
+          using: iceberg

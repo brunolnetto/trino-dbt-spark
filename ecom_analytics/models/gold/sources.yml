@@ -1,8 +1,75 @@
 version: 2
 
+models:
+  - name: sales_values_by_category
+    description: Monthly sales aggregations by product category
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "total_bills <= (SELECT COUNT(*) FROM {{ ref('fact_sales') }})"
+      - dbt_utils.expression_is_true:
+          expression: "total_sales <= (SELECT SUM(payment_value) FROM {{ ref('fact_sales') }})"
+    columns:
+      - name: monthly
+        data_type: string
+        description: Month in YYYY-MM format
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "regexp_like(monthly, '^[0-9]{4}-[0-9]{2}$')"
+      - name: category
+        data_type: string
+        description: Product category name in English
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_products')
+              field: product_category_name_english
+          - valid_category_counts
+      - name: total_sales
+        data_type: float
+        description: Sum of sales values for the category in the month
+        tests:
+          - not_null
+          - dbt_utils.positive_value
+      - name: total_bills
+        data_type: integer
+        description: Count of orders for the category in the month
+        tests:
+          - not_null
+          - dbt_utils.positive_value
+      - name: values_per_bills
+        data_type: float
+        description: Average order value (total_sales / total_bills)
+        tests:
+          - not_null
+          - dbt_utils.positive_value
+          - dbt_utils.expression_is_true:
+              expression: "values_per_bills = (total_sales * 1.0 / total_bills)"
+
 sources:
   - name: silver
     description: "Persisted Silver tables from Spark in S3 via Trino"
     tables:
-      - name: dim_products
       - name: fact_sales
+        description: Sales fact table with order details
+        columns:
+          - name: order_id
+            data_type: string
+          - name: customer_id
+            data_type: string
+          - name: order_purchase_timestamp
+            data_type: timestamp
+          - name: product_id
+            data_type: string
+          - name: payment_value
+            data_type: float
+          - name: order_status
+            data_type: string
+      
+      - name: dim_products
+        description: Product dimension table with categories
+        columns:
+          - name: product_id
+            data_type: string
+          - name: product_category_name_english
+            data_type: string

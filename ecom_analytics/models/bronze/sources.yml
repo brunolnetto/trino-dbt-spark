@@ -1,11 +1,246 @@
 version: 2
 
+models:
+  - name: olist_order_items
+    description: Order items from Brazilian e-commerce
+    tests:
+      - dbt_utils.equal_rowcount:
+          compare_model: source('landing_zone', 'olist_order_items_dataset')
+    columns:
+      - name: order_id
+        data_type: string
+        description: Unique identifier of the order
+        tests:
+          - not_null
+          - relationships:
+              to: ref('olist_orders')
+              field: order_id
+      - name: order_item_id
+        data_type: integer
+        description: Sequential number identifying number of items included in the same order
+        tests:
+          - not_null
+          - positive_value
+      - name: product_id
+        data_type: string
+        description: Product identifier
+        tests:
+          - not_null
+          - relationships:
+              to: ref('olist_products')
+              field: product_id
+      - name: seller_id
+        data_type: string
+        description: Seller identifier
+        tests:
+          - not_null
+      - name: shipping_limit_date
+        data_type: timestamp
+        description: Shows the seller shipping limit date for handling the order over to the logistic partner
+        tests:
+          - not_null
+          - dbt_utils.is_timestamp
+          - order_dates_are_valid
+      - name: price
+        data_type: float
+        description: Item price
+        tests:
+          - not_null
+          - dbt_utils.positive_value
+          - reasonable_payment_value
+      - name: freight_value
+        data_type: float
+        description: Item freight value
+        tests:
+          - not_null
+          - dbt_utils.positive_value
+
+  - name: olist_orders
+    description: Orders core information
+    tests:
+      - dbt_utils.equal_rowcount:
+          compare_model: source('landing_zone', 'olist_orders_dataset')
+    columns:
+      - name: order_id
+        data_type: string
+        description: Unique identifier of the order
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+        data_type: string
+        description: Customer unique identifier
+        tests:
+          - not_null
+      - name: order_status
+        data_type: string
+        description: Order status (delivered, shipped, etc.)
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['delivered', 'shipped', 'canceled', 'unavailable', 'invoiced', 'processing', 'created', 'approved']
+      - name: order_purchase_timestamp
+        data_type: timestamp
+        description: Purchase timestamp
+        tests:
+          - not_null
+          - dbt_utils.is_timestamp
+          - order_dates_are_valid
+      - name: order_approved_at
+        data_type: timestamp
+        description: Payment approval timestamp
+        tests:
+          - dbt_utils.is_timestamp
+          - order_dates_are_valid
+      - name: order_delivered_carrier_date
+        data_type: timestamp
+        description: Order posting date
+        tests:
+          - dbt_utils.is_timestamp
+          - order_dates_are_valid
+      - name: order_delivered_customer_date
+        data_type: timestamp
+        description: Actual order delivery date to the customer
+        tests:
+          - dbt_utils.is_timestamp
+          - order_dates_are_valid
+      - name: order_estimated_delivery_date
+        data_type: timestamp
+        description: Estimated delivery date that was informed to customer at purchase date
+        tests:
+          - not_null
+          - dbt_utils.is_timestamp
+          - order_dates_are_valid
+
+  - name: olist_products
+    description: Products sold by Olist
+    tests:
+      - dbt_utils.equal_rowcount:
+          compare_model: source('landing_zone', 'olist_products_dataset')
+    columns:
+      - name: product_id
+        data_type: string
+        description: Product identifier
+        tests:
+          - unique
+          - not_null
+      - name: product_category_name
+        data_type: string
+        description: Root category of product
+        tests:
+          - not_null
+          - relationships:
+              to: ref('product_category_name_translation')
+              field: product_category_name
+      - name: product_name_lenght
+        data_type: integer
+        description: Length of product name
+        tests:
+          - dbt_utils.positive_value
+      - name: product_description_lenght
+        data_type: integer
+        description: Length of product description
+        tests:
+          - dbt_utils.positive_value
+      - name: product_photos_qty
+        data_type: integer
+        description: Number of product published photos
+        tests:
+          - dbt_utils.positive_value
+      - name: product_weight_g
+        data_type: integer
+        description: Product weight in grams
+        tests:
+          - dbt_utils.positive_value
+      - name: product_length_cm
+        data_type: integer
+        description: Product length in centimeters
+        tests:
+          - dbt_utils.positive_value
+      - name: product_height_cm
+        data_type: integer
+        description: Product height in centimeters
+        tests:
+          - dbt_utils.positive_value
+      - name: product_width_cm
+        data_type: integer
+        description: Product width in centimeters
+        tests:
+          - dbt_utils.positive_value
+
+  - name: olist_order_payments
+    description: Order payment information
+    tests:
+      - dbt_utils.equal_rowcount:
+          compare_model: source('landing_zone', 'olist_order_payments_dataset')
+      - payment_matches_items
+    columns:
+      - name: order_id
+        data_type: string
+        description: Unique identifier of the order
+        tests:
+          - not_null
+          - relationships:
+              to: ref('olist_orders')
+              field: order_id
+      - name: payment_sequential
+        data_type: integer
+        description: Sequential payment number
+        tests:
+          - not_null
+          - dbt_utils.positive_value
+      - name: payment_type
+        data_type: string
+        description: Payment method chosen by the customer
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['credit_card', 'boleto', 'voucher', 'debit_card']
+      - name: payment_installments
+        data_type: integer
+        description: Number of installments chosen by the customer
+        tests:
+          - not_null
+          - dbt_utils.positive_value
+      - name: payment_value
+        data_type: float
+        description: Transaction value
+        tests:
+          - not_null
+          - dbt_utils.positive_value
+          - reasonable_payment_value
+
+  - name: product_category_name_translation
+    description: Translation of product category names to English
+    tests:
+      - dbt_utils.equal_rowcount:
+          compare_model: source('landing_zone', 'product_category_name_translation')
+    columns:
+      - name: product_category_name
+        data_type: string
+        description: Category name in Portuguese
+        tests:
+          - unique
+          - not_null
+          - valid_category_counts
+      - name: product_category_name_english
+        data_type: string
+        description: Category name in English
+        tests:
+          - unique
+          - not_null
+
 sources:
   - name: landing_zone
-    description: "Raw MySQL tables via Trino"
+    description: "Source data from CSV files via dbt seeds"
     tables:
       - name: olist_order_items_dataset
+        description: Raw order items data
       - name: olist_order_payments_dataset
+        description: Raw order payments data
       - name: olist_orders_dataset
+        description: Raw orders data
       - name: olist_products_dataset
+        description: Raw products data
       - name: product_category_name_translation
+        description: Raw category translations data

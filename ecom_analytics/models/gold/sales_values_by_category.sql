@@ -9,7 +9,8 @@ WITH daily_sales_products AS (
   GROUP BY 
     CAST(order_purchase_timestamp AS DATE)
     , product_id
-), daily_sales_categories AS (
+), 
+daily_sales_categories AS (
   SELECT
     ts.daily
     , DATE_FORMAT(ts.daily, 'yyyy-MM') AS monthly

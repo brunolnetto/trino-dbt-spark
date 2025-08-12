@@ -38,7 +38,7 @@ down:
 
 restart: down up
 
-to_mysql_root:
+to_mysql:
 	docker exec -it de_mysql mysql -u"root" -p"${MYSQL_ROOT_PASSWORD}"
 
 to_psql:
@@ -52,11 +52,11 @@ to_psql:
 run_external:
 	dbt run-operation --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROFILES_DIR) --profile $(DBT_PROFILE_SILVER) stage_external_sources
 
-# 2) Bronze: run Bronze models with Trino profile (writes Delta to S3/MinIO)
+# 2) Bronze: run Bronze models with Trino profile (writes Iceberg to S3/MinIO)
 run_bronze:
 	dbt build --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROFILES_DIR) --profile $(DBT_PROFILE_BRONZE) --select $(SELECT_BRONZE) $(FULL_REFRESH)
 
-# 3) Silver: run Silver models with Spark profile (reads Bronze Delta -> writes Silver Delta)
+# 3) Silver: run Silver models with Spark profile (reads Bronze Iceberg -> writes Silver Iceberg)
 run_silver:
 	dbt build --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROFILES_DIR) --profile $(DBT_PROFILE_SILVER) --select $(SELECT_SILVER) $(FULL_REFRESH)
 

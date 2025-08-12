@@ -75,7 +75,7 @@ dbt test --models model_name --profile spark
 
 ### Data Flow
 ```
-MySQL → Trino → Delta Lake (Bronze) → Spark → Delta Lake (Silver) → Trino → PostgreSQL (Gold) → Metabase
+MySQL → Trino → Apache Iceberg (Bronze) → Spark → Apache Iceberg (Silver) → Trino → PostgreSQL (Gold) → Metabase
 ```
 
 ### Layer Responsibilities
@@ -234,12 +234,16 @@ WHERE status = 'completed'  -- Filter early
 
 ### Storage Optimization
 ```sql
--- Delta Lake optimization
-OPTIMIZE delta.warehouse.silver.fact_sales
-ZORDER BY (customer_id, order_date);
+-- Apache Iceberg optimization
+CALL system.rewrite_datafiles(
+  table => 'warehouse.silver.fact_sales',
+  strategy => 'sort',
+  sort_order => 'order_date'
+);
 
--- Vacuum old versions
-VACUUM delta.warehouse.silver.fact_sales RETAIN 168 HOURS;
+-- Data retention
+ALTER TABLE iceberg.warehouse.silver.fact_sales
+  EXECUTE expire_snapshots(retention_threshold => 168);
 ```
 
 ### dbt Configuration
@@ -263,7 +267,7 @@ models:
 - **Medallion Architecture**: Bronze → Silver → Gold progression
 - **Engine Selection**: Right tool for each job
 - **dbt Incremental**: Efficient large dataset updates
-- **Delta Lake**: ACID transactions for data lake
+- **Apache Iceberg**: ACID transactions for data lake
 - **Cross-Engine**: Data flowing between different systems
 
 ### Must-Try Exercises

@@ -69,7 +69,7 @@ This project demonstrates a complete modern data engineering stack. Choose your 
 - Medallion architecture implementation details
 - Multi-engine processing strategies
 - Advanced dbt patterns and configurations
-- Data lake architecture with Delta Lake
+- Data lake architecture with Apache Iceberg
 - Infrastructure as code with Docker
 - Performance optimization and scalability
 - Security and governance patterns
@@ -133,7 +133,7 @@ LEARNING_GUIDE → HANDS_ON_TUTORIAL → TECHNICAL_DEEP_DIVE → BEST_PRACTICES 
 
 ### Data Lake Implementation
 - **Start with**: TECHNICAL_DEEP_DIVE (Data Lake Architecture)
-- **Focus on**: Storage patterns, Delta Lake features, optimization
+- **Focus on**: Storage patterns, Apache Iceberg features, optimization
 - **Practice**: Partitioning and storage layout exercises
 
 ### Multi-Engine Processing
@@ -176,7 +176,7 @@ After completing the materials, you should be able to answer:
 
 1. **Architecture**: Why use different engines for different layers?
 2. **Implementation**: How do incremental models work in dbt?
-3. **Performance**: What are the key optimization strategies for Delta Lake?
+3. **Performance**: What are the key optimization strategies for Apache Iceberg?
 4. **Operations**: How would you implement data quality monitoring?
 5. **Scaling**: How would you adapt this architecture for 100x more data?
 

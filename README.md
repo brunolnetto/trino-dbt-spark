@@ -38,23 +38,23 @@ This project serves as a comprehensive learning resource for modern data enginee
 This project implements a **Medallion Architecture** using multiple engines optimized for different workloads:
 
 ```
-MySQL (Source) → Trino (Bronze) → Spark (Silver) → PostgreSQL (Gold) → Metabase (BI)
+Source CSVs → dbt Seeds → Apache Iceberg (Bronze) → Spark (Silver) → PostgreSQL (Gold) → Metabase (BI)
 ```
 
 ### Technology Stack
-- **Trino**: Distributed SQL query engine for fast analytics
-- **Apache Spark**: Big data processing and transformations  
-- **dbt**: Data transformation framework with version control
-- **Delta Lake**: ACID transactions and versioning for data lake
+- **dbt**: Data transformation framework and pipeline orchestration
+- **Apache Spark**: Big data processing and transformations
+- **Apache Iceberg**: ACID transactions and versioning for data lake
 - **MinIO**: S3-compatible object storage
 - **PostgreSQL**: Analytics warehouse for BI
 - **Metabase**: Business intelligence and visualization
+- **Trino**: Distributed SQL query engine (optional for direct querying)
 
 ## 🎯 What You'll Learn
 
 - **Modern Data Architecture**: Medallion pattern implementation
 - **Multi-Engine Processing**: Leveraging different tools for optimal performance
-- **Data Lake Engineering**: Delta Lake, partitioning, and optimization
+- **Data Lake Engineering**: Apache Iceberg, partitioning, and optimization
 - **dbt Best Practices**: Multi-profile setups, testing, and incremental models
 - **Infrastructure as Code**: Docker Compose orchestration
 - **Data Quality**: Testing frameworks and monitoring
@@ -76,93 +76,40 @@ make up     # Start all services (wait 2-3 minutes for health checks)
 
 ### Data Pipeline Execution
 
+The data pipeline uses dbt seeds to load the initial data and then processes it through the medallion architecture layers:
+
 ```bash
 cd ecom_analytics
 
-# Complete pipeline execution
+# Complete pipeline execution (including data seeding)
 make run_all
 
-# Or run individual layers
-make run_bronze  # Trino → Delta Lake
-make run_silver  # Spark transformations  
-make run_gold    # Analytics → PostgreSQL
+# Or run individual steps:
+make seed            # Load source CSV data into warehouse
+make run_bronze      # Transform data in Bronze layer
+make run_external    # Set up external tables
+make run_silver      # Transform Bronze → Silver
+make run_gold        # Transform Silver → Gold
+
+# For incremental processing (skip full refresh):
+make run_all FULL_REFRESH=""
 ```
 
-## 🏛️ Detailed Setup (Original Instructions)
+## 🏛️ Pipeline Architecture
 
-### Prepare MySQL data
+### Data Flow
+1. Source CSV files are loaded via dbt seeds into the data warehouse
+2. Bronze layer captures the raw data in Iceberg format
+3. Silver layer applies business transformations and data quality rules
+4. Gold layer creates analytics-ready views in PostgreSQL
+5. Metabase connects to PostgreSQL for visualization
 
-```sql
-# copy CSV data to mysql container
-# cd path/to/brazilian-ecommerce/
-docker cp brazilian-ecommerce/ de_mysql:/tmp/
-docker cp mysql_schemas.sql de_mysql:/tmp/
+### Data Quality
+- Bronze: Raw data validation and type casting
+- Silver: Business rules and referential integrity
+- Gold: Aggregation and final validation
 
-# login to mysql server as root
-make to_mysql_root
-CREATE DATABASE brazillian_ecommerce;
-USE brazillian_ecommerce;
-GRANT ALL PRIVILEGES ON *.* TO admin;
-SHOW GLOBAL VARIABLES LIKE 'LOCAL_INFILE';
-SET GLOBAL LOCAL_INFILE=TRUE;
-# exit
-
-# run commands
-make to_mysql
-
-source /tmp/mysql_schemas.sql;
-show tables;
-
-LOAD DATA LOCAL INFILE '/tmp/brazilian-ecommerce/olist_order_items_dataset.csv' INTO TABLE olist_order_items_dataset FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' IGNORE 1 ROWS;
-LOAD DATA LOCAL INFILE '/tmp/brazilian-ecommerce/olist_order_payments_dataset.csv' INTO TABLE olist_order_payments_dataset FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' IGNORE 1 ROWS;
-LOAD DATA LOCAL INFILE '/tmp/brazilian-ecommerce/olist_orders_dataset.csv' INTO TABLE olist_orders_dataset FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' IGNORE 1 ROWS;
-LOAD DATA LOCAL INFILE '/tmp/brazilian-ecommerce/olist_products_dataset.csv' INTO TABLE olist_products_dataset FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' IGNORE 1 ROWS;
-LOAD DATA LOCAL INFILE '/tmp/brazilian-ecommerce/product_category_name_translation.csv' INTO TABLE product_category_name_translation FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' IGNORE 1 ROWS;
-
-SELECT * FROM olist_order_items_dataset LIMIT 10;
-SELECT * FROM olist_order_payments_dataset LIMIT 10;
-SELECT * FROM olist_orders_dataset LIMIT 10;
-SELECT * FROM olist_products_dataset LIMIT 10;
-SELECT * FROM product_category_name_translation LIMIT 10;
-```
-
-
-# Prepare data PostgreSQL
-```bash
-make to_psql
-
-create database metabaseappdb;
-create database ecom_analytics;
-```
-
-# Prepare delta-table on warehouse Data lake
-```sql
-SHOW catalogs;
-
-SHOW SCHEMAS FROM warehouse;
-
-CREATE SCHEMA IF NOT EXISTS warehouse.bronze WITH (location='s3a://warehouse/bronze');
-DROP table if EXISTS warehouse.bronze.mytable;
-CREATE TABLE warehouse.bronze.mytable (name varchar, id integer);
-INSERT INTO warehouse.bronze.mytable VALUES ( 'John', 1), ('Jane', 2);
-SELECT * FROM warehouse.bronze.mytable;
-
-CREATE SCHEMA IF NOT EXISTS warehouse.silver WITH (location='s3a://warehouse/silver');
-
--- https://docs.getdbt.com/reference/resource-properties/external
--- https://github.com/dbt-labs/dbt-external-tables
-dbt run-operation stage_external_sources --vars "ext_full_refresh: true"
-```
-
-# Run DBT
-```bash
-cd ecom_analytics
-make run_bronze
-
-make run_external
-make run_silver
-make run_gold
-```
+For detailed technical implementation, see the [Technical Deep Dive](./TECHNICAL_DEEP_DIVE.md).
 
 ## 🎯 Use Cases and Applications
 
@@ -177,7 +124,7 @@ This architecture is ideal for:
 
 - **Medallion Architecture**: Progressive data refinement through Bronze → Silver → Gold
 - **Multi-Engine Optimization**: Right tool for each job (Trino for queries, Spark for ETL)
-- **Delta Lake**: ACID transactions, time travel, and schema evolution
+- **Apache Iceberg**: ACID transactions, time travel, and schema evolution
 - **dbt Multi-Profile**: Engine-specific configurations and optimizations
 - **Data Quality**: Comprehensive testing and validation frameworks
 - **Infrastructure as Code**: Reproducible environments with Docker
@@ -208,7 +155,7 @@ This project is open source and available for educational and commercial use.
 
 - Brazilian E-commerce dataset by Olist
 - Open source data engineering community
-- dbt, Trino, Spark, and Delta Lake communities
+- dbt, Trino, Spark, and Apache Iceberg communities
 
 ---
 

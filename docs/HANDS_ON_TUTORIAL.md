@@ -191,7 +191,7 @@ cat models/bronze/olist_orders.sql
 **Learning Points**:
 - Bronze layer preserves raw data structure
 - Minimal transformations (data typing, basic validation)
-- Delta Lake format provides ACID compliance
+- Apache Iceberg format provides ACID compliance
 - Incremental materialization for efficiency
 
 ### Exercise 4: Silver Layer Transformations
@@ -473,7 +473,7 @@ After completing these exercises:
 
 - [dbt Documentation](https://docs.getdbt.com/)
 - [Trino Documentation](https://trino.io/docs/)
-- [Delta Lake Documentation](https://docs.delta.io/)
+- [Apache Iceberg Documentation](https://iceberg.apache.org/)
 - [Apache Spark Documentation](https://spark.apache.org/docs/latest/)
 
 This hands-on tutorial provides a foundation for building modern data engineering skills through practical experience with industry-standard tools and patterns.

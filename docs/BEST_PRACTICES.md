@@ -25,7 +25,7 @@ models:
   bronze:
     +materialized: incremental
     +incremental_strategy: delete+insert
-    +file_format: delta
+    +file_format: iceberg
     meta:
       layer: "bronze"
       owner: "data_engineering"

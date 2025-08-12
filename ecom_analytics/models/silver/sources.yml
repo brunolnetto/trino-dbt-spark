@@ -6,7 +6,7 @@ sources:
       - name: olist_products
         external:
           location: 's3a://warehouse/bronze/olist_products'
-          using: delta
+          using: iceberg
         columns:
           - name: product_id
             data_type: string
@@ -29,7 +29,7 @@ sources:
       - name: product_category_name_translation
         external:
           location: 's3a://warehouse/bronze/product_category_name_translation'
-          using: delta
+          using: iceberg
         columns:
           - name: product_category_name
             data_type: string
@@ -38,7 +38,7 @@ sources:
       - name: olist_order_items
         external:
           location: 's3a://warehouse/bronze/olist_order_items'
-          using: delta
+          using: iceberg
         columns:
           - name: order_id
             data_type: string
@@ -57,7 +57,7 @@ sources:
       - name: olist_order_payments
         external:
           location: 's3a://warehouse/bronze/olist_order_payments'
-          using: delta
+          using: iceberg
         columns:
           - name: order_id
             data_type: string
@@ -72,7 +72,7 @@ sources:
       - name: olist_orders
         external:
           location: 's3a://warehouse/bronze/olist_orders'
-          using: delta
+          using: iceberg
         columns:
           - name: order_id
             data_type: string

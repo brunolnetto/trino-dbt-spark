@@ -9,7 +9,7 @@ This document provides a technical analysis of the advanced patterns and practic
 The medallion architecture (Bronze → Silver → Gold) implements several key design principles:
 
 1. **Single Source of Truth**: Raw data is preserved in Bronze
-2. **Immutable Data**: Delta Lake provides versioning and time travel
+2. **Immutable Data**: Apache Iceberg provides versioning and time travel
 3. **Progressive Enhancement**: Each layer adds business value
 4. **Fault Tolerance**: Layer isolation prevents cascade failures
 
@@ -30,13 +30,13 @@ graph LR
 #### Bronze Layer: Data Ingestion
 - **Responsibility**: Exact replica of source systems
 - **Processing**: Minimal (schema validation, data typing)
-- **Storage**: Delta Lake format for ACID compliance
+- **Storage**: Apache Iceberg format for ACID compliance
 - **Retention**: Long-term (years) for audit and replay
 
 #### Silver Layer: Data Curation  
 - **Responsibility**: Business logic application
 - **Processing**: Joins, deduplication, standardization
-- **Storage**: Optimized Delta tables with partitioning
+- **Storage**: Optimized Iceberg tables with partitioning
 - **Retention**: Medium-term (months to years)
 
 #### Gold Layer: Analytics Aggregation
@@ -59,21 +59,18 @@ graph LR
 
 ```python
 # Conceptual data flow
-def data_pipeline():
-    # Bronze: Trino reads from MySQL, writes to Delta Lake
-    bronze_data = trino.query("""
-        SELECT * FROM mysql.catalog.source_table
-    """).write_delta("s3://warehouse/bronze/")
-    
-    # Silver: Spark reads Delta, transforms, writes Delta
-    silver_data = spark.read.delta("s3://warehouse/bronze/") \
-        .transform(business_logic) \
-        .write.delta("s3://warehouse/silver/")
-    
-    # Gold: Trino reads Delta, writes to PostgreSQL
-    trino.query("""
+def data_pipeline():    # Bronze: Trino reads from MySQL, writes to Apache Iceberg
+    SELECT customer_data FROM mysql.ecommerce
+    """).write_iceberg("s3://warehouse/bronze/")
+
+    # Silver: Spark reads Iceberg, transforms, writes Iceberg
+    silver_data = spark.read.iceberg("s3://warehouse/bronze/") 
+        .transform(business_logic) 
+        .write.iceberg("s3://warehouse/silver/")
+
+    # Gold: Trino reads Iceberg, writes to PostgreSQL    trino.query("""
         INSERT INTO postgres.schema.metrics
-        SELECT aggregated_metrics FROM delta.warehouse.silver
+        SELECT aggregated_metrics FROM iceberg.warehouse.silver
     """)
 ```
 
@@ -179,20 +176,20 @@ s3://warehouse/
     └── aggregated_metrics/
 ```
 
-### Delta Lake Features Utilized
+### Apache Iceberg Features Utilized
 
 1. **ACID Transactions**: Consistent reads during writes
 2. **Time Travel**: Historical data analysis and debugging
 3. **Schema Evolution**: Non-breaking schema changes
-4. **Optimizations**: Z-ordering and compaction
+4. **Optimizations**: Data file compaction and sorting
 
 ```sql
 -- Time travel example
-SELECT * FROM delta.warehouse.bronze.orders
-VERSION AS OF 123
+SELECT * FROM iceberg.warehouse.bronze.orders
+FOR TIMESTAMP AS OF TIMESTAMP '2023-01-01 00:00:00'
 
 -- Schema evolution example  
-ALTER TABLE delta.warehouse.silver.products
+ALTER TABLE iceberg.warehouse.silver.products
 ADD COLUMN new_feature STRING
 ```
 
@@ -322,11 +319,11 @@ models:
 
 ```sql
 -- Spark SQL optimization commands
-OPTIMIZE delta.warehouse.silver.fact_sales
+CALL system.rewrite_datafiles('warehouse.silver.fact_sales')
 ZORDER BY (order_date, customer_id);
 
 -- Vacuum old versions
-VACUUM delta.warehouse.silver.fact_sales RETAIN 168 HOURS;
+ALTER TABLE iceberg.warehouse.silver.fact_sales EXECUTE expire_snapshots(retention_threshold => 168);
 ```
 
 ### Memory Management

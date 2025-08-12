@@ -30,7 +30,7 @@ Source Data (MySQL) → Bronze Layer (Trino) → Silver Layer (Spark) → Gold L
 | **dbt** | Data transformation framework | Version-controlled, testable SQL transformations |
 | **MinIO** | S3-compatible object storage | Cost-effective data lake storage |
 | **Hive Metastore** | Metadata management | Schema registry for data lake |
-| **Delta Lake** | ACID transactions for data lake | Reliable data versioning and updates |
+| **Apache Iceberg** | ACID transactions for data lake | Reliable data versioning and updates |
 
 ### Supporting Infrastructure
 
@@ -44,7 +44,7 @@ Source Data (MySQL) → Bronze Layer (Trino) → Silver Layer (Spark) → Gold L
 ### 1. Bronze Layer (Raw Data Ingestion)
 **Engine**: Trino  
 **Purpose**: Minimal processing, data lake ingestion  
-**Format**: Delta tables in MinIO
+**Format**: Iceberg tables in MinIO
 
 ```sql
 -- Example: Bronze layer model
@@ -65,7 +65,7 @@ FROM {{ source('landing_zone', 'olist_orders_dataset') }}
 ### 2. Silver Layer (Data Transformation)
 **Engine**: Spark  
 **Purpose**: Data cleaning, standardization, dimensional modeling  
-**Format**: Delta tables with ACID transactions
+**Format**: Iceberg tables with ACID transactions
 
 ```sql
 -- Example: Dimensional model in Silver
@@ -134,12 +134,12 @@ models:
   bronze:
     +materialized: incremental
     +incremental_strategy: delete+insert
-    +file_format: delta
+    +file_format: iceberg
     
   silver:
     +materialized: incremental
     +incremental_strategy: merge
-    +file_format: delta
+    +file_format: iceberg
     
   gold:
     +materialized: table
@@ -201,7 +201,7 @@ make test          # Run dbt tests
 - **PostgreSQL**: OLAP queries, BI tool integration
 
 ### 2. Data Lake Best Practices
-- **Delta Lake format**: ACID transactions, time travel
+- **Apache Iceberg format**: ACID transactions, time travel
 - **Partitioning strategy**: Optimized for query patterns
 - **Schema evolution**: Backward compatible changes
 

@@ -7,7 +7,7 @@ This project demonstrates a comprehensive modern data engineering stack that sho
 This project implements a **Medallion Architecture** (Bronze → Silver → Gold) using multiple engines optimized for different workloads:
 
 ```
-Source Data (MySQL) → Bronze Layer (Trino) → Silver Layer (Spark) → Gold Layer (PostgreSQL)
+Source Data (CSV Seeds) → Bronze Layer (dbt) → Silver Layer (Spark) → Gold Layer (PostgreSQL)
                                                                               ↓
                                                                         Metabase (BI)
 ```
@@ -34,7 +34,7 @@ Source Data (MySQL) → Bronze Layer (Trino) → Silver Layer (Spark) → Gold L
 
 ### Supporting Infrastructure
 
-- **MySQL/MariaDB**: Source system simulation
+- **dbt Seeds**: Source data in CSV format
 - **PostgreSQL**: Analytics warehouse
 - **Metabase**: Business intelligence and visualization
 - **Docker Compose**: Containerized deployment
@@ -169,9 +169,9 @@ make up
 
 3. **Prepare source data**:
 ```bash
-# Load CSV data into MySQL
-make to_mysql_root
-# Follow MySQL setup instructions in README
+# Load source CSV data
+make seed
+# Seeds will be automatically loaded into the warehouse
 ```
 
 4. **Run the data pipeline**:

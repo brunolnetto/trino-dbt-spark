@@ -59,8 +59,8 @@ graph LR
 
 ```python
 # Conceptual data flow
-def data_pipeline():    # Bronze: Trino reads from MySQL, writes to Apache Iceberg
-    SELECT customer_data FROM mysql.ecommerce
+def data_pipeline():    # Bronze: dbt seeds loaded into Apache Iceberg
+    SELECT customer_data FROM seeds.ecommerce
     """).write_iceberg("s3://warehouse/bronze/")
 
     # Silver: Spark reads Iceberg, transforms, writes Iceberg

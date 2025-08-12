@@ -24,9 +24,9 @@ make restart
 
 ### 🔗 Database Connections
 ```bash
-# MySQL (source data)
-make to_mysql_root  # Root access
-make to_mysql       # Regular user
+# Source Data (seeds)
+make seed          # Load CSV files into warehouse
+make run_external  # Configure external tables
 
 # PostgreSQL (analytics)
 make to_psql
@@ -75,7 +75,7 @@ dbt test --models model_name --profile spark
 
 ### Data Flow
 ```
-MySQL → Trino → Apache Iceberg (Bronze) → Spark → Apache Iceberg (Silver) → Trino → PostgreSQL (Gold) → Metabase
+CSV Seeds → dbt (Bronze) → Spark (Silver) → PostgreSQL (Gold) → Metabase
 ```
 
 ### Layer Responsibilities

@@ -74,10 +74,10 @@ models/
 **Sources and Staging:**
 ```sql
 -- Sources: raw table names
-source('mysql', 'order_items_dataset')
+source('landing_zone', 'olist_order_items_dataset')
 
 -- Staging: stg_[source]__[entity]
-{{ ref('stg_mysql__orders') }}
+{{ ref('olist_orders') }}
 {{ ref('stg_postgres__customers') }}
 ```
 
@@ -173,7 +173,7 @@ models:
 **Source Data Validation:**
 ```yaml
 sources:
-  - name: mysql
+  - name: landing_zone
     tables:
       - name: orders
         tests:

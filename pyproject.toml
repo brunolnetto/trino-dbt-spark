@@ -1,7 +1,7 @@
 [project]
 name = "trino-dbt-spark"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.0.1"
+description = "A minimal example with dbt, trino and spark"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

@@ -25,10 +25,27 @@ FULL_REFRESH ?= --full-refresh
 .PHONY: build up down restart \
 	to_psql \
 	run_bronze run_external run_silver run_gold run_all \
-	seed install_deps docs select test lint
+	seed install_deps docs select test lint find
 
 lint-fix:
 	sqlfluff fix --dialect trino ecom_analytics/models/**/*.sql
+
+# Find files in the project
+# Usage:
+#   make find PATTERN=some_model     -> Find files containing "some_model"
+#   make find PATTERN=model DIR=silver -> Find files containing "model" in silver directory
+find:
+	@if [ -z "$(PATTERN)" ]; then \
+		echo "Error: PATTERN is required. Usage: make find PATTERN=search_term [DIR=directory]"; \
+		exit 1; \
+	fi; \
+	if [ -z "$(DIR)" ]; then \
+		echo "Searching for '$(PATTERN)' in all project files:"; \
+		grep -r --include="*.sql" --include="*.yml" --include="*.md" "$(PATTERN)" $(DBT_PROJECT_DIR); \
+	else \
+		echo "Searching for '$(PATTERN)' in $(DBT_PROJECT_DIR)/$(DIR):"; \
+		grep -r --include="*.sql" --include="*.yml" --include="*.md" "$(PATTERN)" $(DBT_PROJECT_DIR)/$(DIR); \
+	fi
 
 # Docker helpers
 build:
@@ -57,6 +74,12 @@ run_bronze:
 run_silver:
 	dbt build --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROFILES_DIR) --profile $(DBT_PROFILE_SILVER) --select $(SELECT_SILVER) $(FULL_REFRESH)
 
+# Run any external data processing steps (if needed)
+run_external:
+	@echo "Running external data processing steps..."
+	# Add your external data processing commands here if needed
+	# If not needed, this is just a placeholder for the run_all target
+
 # 3) Gold: run Gold models (Trino profile pointed at Postgres catalog)
 run_gold:
 	dbt build --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROFILES_DIR) --profile $(DBT_PROFILE_GOLD) --select $(SELECT_GOLD) $(FULL_REFRESH)
@@ -83,3 +106,12 @@ select:
 
 test:
 	dbt test --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROFILES_DIR) --profile $(DBT_PROFILE_SILVER)
+
+# List database objects
+# Usage:
+#   make list_objects PROFILE=spark    -> List objects in Spark
+#   make list_objects PROFILE=trino    -> List objects in Trino
+list_objects:
+	@PROFILE=$${PROFILE:-$(DBT_PROFILE_SILVER)}; \
+	echo "Listing database objects for profile: $$PROFILE"; \
+	dbt ls --resource-type model --output name --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROFILES_DIR) --profile $$PROFILE

@@ -22,16 +22,16 @@ This project serves as a comprehensive learning resource for modern data enginee
 
 | Resource | Purpose | Best For |
 |----------|---------|----------|
-| **[📋 Learning Guide](./LEARNING_GUIDE.md)** | Architecture overview and foundational concepts | Everyone - start here for understanding |
-| **[🔧 Hands-On Tutorial](./HANDS_ON_TUTORIAL.md)** | Step-by-step practical exercises | Learning by building and experimenting |
-| **[🏛️ Technical Deep Dive](./TECHNICAL_DEEP_DIVE.md)** | Advanced patterns and implementation details | Experienced engineers and architects |
-| **[📖 Best Practices](./BEST_PRACTICES.md)** | Production-ready patterns and guidelines | Teams building production systems |
+| **[📋 Learning Guide](./docs/LEARNING_GUIDE.md)** | Architecture overview and foundational concepts | Everyone - start here for understanding |
+| **[🔧 Hands-On Tutorial](./docs/HANDS_ON_TUTORIAL.md)** | Step-by-step practical exercises | Learning by building and experimenting |
+| **[🏛️ Technical Deep Dive](./docs/TECHNICAL_DEEP_DIVE.md)** | Advanced patterns and implementation details | Experienced engineers and architects |
+| **[📖 Best Practices](./docs/BEST_PRACTICES.md)** | Production-ready patterns and guidelines | Teams building production systems |
 
 ### 🎓 Quick Learning Paths
 
-- **🚀 Quick Start (30 min)**: [Learning Guide](./LEARNING_GUIDE.md) → [Tutorial Exercises 1-2](./HANDS_ON_TUTORIAL.md)
-- **🏗️ Architecture Focus (2-3 hrs)**: [Learning Guide](./LEARNING_GUIDE.md) → [Technical Deep Dive](./TECHNICAL_DEEP_DIVE.md)
-- **🛠️ Hands-On Implementation (4-6 hrs)**: [Complete Tutorial](./HANDS_ON_TUTORIAL.md) → [Best Practices](./BEST_PRACTICES.md)
+- **🚀 Quick Start (30 min)**: [Learning Guide](./docs/LEARNING_GUIDE.md) → [Tutorial Exercises 1-2](./docs/HANDS_ON_TUTORIAL.md)
+- **🏗️ Architecture Focus (2-3 hrs)**: [Learning Guide](./docs/LEARNING_GUIDE.md) → [Technical Deep Dive](./docs/TECHNICAL_DEEP_DIVE.md)
+- **🛠️ Hands-On Implementation (4-6 hrs)**: [Complete Tutorial](./docs/HANDS_ON_TUTORIAL.md) → [Best Practices](./docs/BEST_PRACTICES.md)
 
 ## 🏗️ Architecture Overview
 

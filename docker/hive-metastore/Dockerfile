@@ -1,62 +1,89 @@
-# docker/hive-metastore/Dockerfile
+# syntax=docker/dockerfile:1.4
+FROM eclipse-temurin:8-jre AS downloads
+
+ARG HADOOP_VERSION=3.2.0
+ARG METASTORE_VERSION=3.0.0
+ARG MYSQL_CONNECTOR_VER=8.0.33
+
+WORKDIR /downloads
+
+# Download all artifacts in separate layers for better caching
+RUN set -ex; \
+    curl -fL "https://archive.apache.org/dist/hive/hive-standalone-metastore-${METASTORE_VERSION}/hive-standalone-metastore-${METASTORE_VERSION}-bin.tar.gz" \
+    -o hive-metastore.tar.gz && \
+    echo "Hive metastore downloaded successfully" && \
+    ls -l hive-metastore.tar.gz
+
+RUN set -ex; \
+    curl -fL "https://archive.apache.org/dist/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz" \
+    -o hadoop.tar.gz && \
+    echo "Hadoop downloaded successfully" && \
+    ls -l hadoop.tar.gz
+
+RUN set -ex; \
+    curl -fL "https://repo1.maven.org/maven2/mysql/mysql-connector-java/${MYSQL_CONNECTOR_VER}/mysql-connector-java-${MYSQL_CONNECTOR_VER}.jar" \
+    -o mysql-connector.jar && \
+    echo "MySQL connector downloaded successfully" && \
+    ls -l mysql-connector.jar
+
 FROM eclipse-temurin:8-jre
 
 ARG HADOOP_VERSION=3.2.0
 ARG METASTORE_VERSION=3.0.0
 ARG MYSQL_CONNECTOR_VER=8.0.33
 
-ENV HADOOP_VERSION=${HADOOP_VERSION}
-ENV METASTORE_VERSION=${METASTORE_VERSION}
-ENV HADOOP_HOME=/opt/hadoop-${HADOOP_VERSION}
-ENV HIVE_HOME=/opt/apache-hive-metastore-${METASTORE_VERSION}-bin
-ENV HIVE_SYMLINK=/opt/hive
-
-ENV JAVA_HOME=/opt/java/openjdk \
-    PATH="$JAVA_HOME/bin:$PATH"
+ENV HADOOP_VERSION=${HADOOP_VERSION} \
+    METASTORE_VERSION=${METASTORE_VERSION} \
+    HADOOP_HOME=/opt/hadoop-${HADOOP_VERSION} \
+    HIVE_HOME=/opt/apache-hive-metastore-${METASTORE_VERSION}-bin \
+    HIVE_SYMLINK=/opt/hive \
+    JAVA_HOME=/opt/java/openjdk \
+    PATH="/opt/java/openjdk/bin:$PATH"
 
 WORKDIR /opt
 
+# Install dependencies in a single layer
 RUN set -eux; \
     apt-get update; \
-    apt-get install -y --no-install-recommends curl tar gzip ca-certificates procps wget unzip telnet netcat-traditional; \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends \
+        procps \
+        netcat-traditional \
+    && rm -rf /var/lib/apt/lists/*
 
-# Download & extract hive standalone metastore + hadoop, then normalize the extracted dir into HIVE_HOME
-RUN set -eux; \
-    curl -sSL "https://archive.apache.org/dist/hive/hive-standalone-metastore-${METASTORE_VERSION}/hive-standalone-metastore-${METASTORE_VERSION}-bin.tar.gz" | tar -xz -C /opt; \
-    curl -sSL "https://archive.apache.org/dist/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz" | tar -xz -C /opt; \
-    HIVE_EXTRACTED=$(ls -d /opt/*metastore*${METASTORE_VERSION}*-bin 2>/dev/null | head -n1); \
-    if [ -z "$HIVE_EXTRACTED" ]; then echo "Hive extraction not found"; exit 1; fi; \
-    if [ "$HIVE_EXTRACTED" != "${HIVE_HOME}" ]; then \
-      mv "$HIVE_EXTRACTED" "${HIVE_HOME}"; \
-    fi; \
-    ln -sfn "${HIVE_HOME}" "${HIVE_SYMLINK}"
+# Copy and extract files from download stage
+COPY --from=downloads /downloads/hive-metastore.tar.gz ./
+COPY --from=downloads /downloads/hadoop.tar.gz ./
+
+RUN set -ex; \
+    echo "Extracting Hive metastore..." && \
+    tar xzf hive-metastore.tar.gz && \
+    echo "Extracting Hadoop..." && \
+    tar xzf hadoop.tar.gz && \
+    echo "Removing archives..." && \
+    rm *.tar.gz && \
+    echo "Creating symlink..." && \
+    ln -sfn "${HIVE_HOME}" "${HIVE_SYMLINK}" && \
+    echo "Extraction complete" && \
+    ls -la /opt/
 
 
-# Fetch MySQL connector straight into hive lib
-RUN set -eux; \
-    mkdir -p "${HIVE_HOME}/lib"; \
-    curl -sSL "https://repo1.maven.org/maven2/mysql/mysql-connector-java/${MYSQL_CONNECTOR_VER}/mysql-connector-java-${MYSQL_CONNECTOR_VER}.jar" \
-      -o "${HIVE_HOME}/lib/mysql-connector-java-${MYSQL_CONNECTOR_VER}.jar"; \
-    chmod 644 "${HIVE_HOME}/lib/mysql-connector-java-${MYSQL_CONNECTOR_VER}.jar"
+# Set up MySQL connector
+COPY --from=downloads /downloads/mysql-connector.jar ${HIVE_HOME}/lib/mysql-connector-java-${MYSQL_CONNECTOR_VER}.jar
+RUN chmod 644 ${HIVE_HOME}/lib/mysql-connector-java-${MYSQL_CONNECTOR_VER}.jar
 
-# copy local configs and the entrypoint (relative to build context: ./docker/hive-metastore)
-COPY conf/metastore-site.xml ${HIVE_HOME}/conf/
-COPY conf/core-site.xml ${HIVE_HOME}/conf/
+# Copy configurations
+COPY conf/metastore-site.xml conf/core-site.xml ${HIVE_HOME}/conf/
 COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-# ensure entrypoint is executable and owned by hive (do this before switching to user)
-RUN chmod +x /entrypoint.sh || true
+# Set up classpath
+ENV HIVE_AUX_JARS_PATH=${HIVE_HOME}/lib/mysql-connector-java-${MYSQL_CONNECTOR_VER}.jar \
+    HADOOP_CLASSPATH=${HADOOP_CLASSPATH}:${HIVE_HOME}/lib/mysql-connector-java-${MYSQL_CONNECTOR_VER}.jar
 
-# force connector into classpath for schematool
-ENV HIVE_AUX_JARS_PATH=${HIVE_HOME}/lib/mysql-connector-java-${MYSQL_CONNECTOR_VER}.jar
-ENV HADOOP_CLASSPATH=${HADOOP_CLASSPATH}:${HIVE_HOME}/lib/mysql-connector-java-${MYSQL_CONNECTOR_VER}.jar
-
-# create user and set ownership
+# Set up user and permissions in a single layer
 RUN groupadd -r hive && \
     useradd -r -g hive -d ${HIVE_HOME} hive && \
     chown -R hive:hive ${HIVE_HOME} /entrypoint.sh
-
 
 USER hive
 WORKDIR ${HIVE_HOME}

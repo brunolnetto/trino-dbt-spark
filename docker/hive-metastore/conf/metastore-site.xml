@@ -1,7 +1,6 @@
 <configuration>
     <!-- Database Authentication -->
     <property>
-       <property>
         <name>fs.s3a.impl</name>
         <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
     </property>
@@ -48,14 +47,6 @@
         <name>datanucleus.autoCreateTables</name>
         <value>true</value>
     </property>
-    <property>
-        <name>javax.jdo.option.ConnectionUserName</name>
-        <value>root</value>
-    </property>
-    <property>
-        <name>javax.jdo.option.ConnectionPassword</name>
-        <value>${env:MYSQL_ROOT_PASSWORD}</value>
-    </property>
     
     <!-- Connection Pool Settings -->
     <property>
@@ -71,11 +62,8 @@
         <value>30</value>
     </property>
     
-    <!-- MinIO/S3 Configuration -->
+    <!-- Metastore Thrift Endpoint -->
     <property>
-        <name>fs.s3a.access.key</name>
-        <value>${env:MINIO_ROOT_USER}</value>
-    </property>roperty>
         <name>metastore.thrift.uris</name>
         <value>thrift://0.0.0.0:9083</value>
         <description>Thrift URI for the remote metastore. Used by metastore client to connect to remote metastore.</description>
@@ -99,46 +87,29 @@
     <!-- Database Connection -->
     <property>
         <name>javax.jdo.option.ConnectionDriverName</name>
-        <value>com.mysql.cj.jdbc.Driver</value>
+        <value>org.postgresql.Driver</value>
     </property>
     <property>
         <name>javax.jdo.option.ConnectionURL</name>
-        <value>jdbc:mysql://${env:MYSQL_HOST}:3306/metastore_db?createDatabaseIfNotExist=true&amp;useSSL=false&amp;allowPublicKeyRetrieval=true&amp;characterEncoding=UTF-8</value>
-    </property>   <property>
-        <name>metastore.task.threads.always</name>
-        <value>org.apache.hadoop.hive.metastore.events.EventCleanerTask,org.apache.hadoop.hive.metastore.MaterializationsCacheCleanerTask</value>
-    </property>
-    <property>
-        <name>metastore.expression.proxy</name>
-        <value>org.apache.hadoop.hive.metastore.DefaultPartitionExpressionProxy</value>
-    </property>
-    <property>
-        <name>javax.jdo.option.ConnectionDriverName</name>
-        <value>com.mysql.cj.jdbc.Driver</value>
-    </property>
-    <property>
-        <name>javax.jdo.option.ConnectionURL</name>
-        <value>jdbc:mysql://${env:MYSQL_HOST}:3306/metastore_db?createDatabaseIfNotExist=true</value>
+        <value>jdbc:postgresql://de_psql:5432/metastore_db</value>
     </property>
     <property>
         <name>javax.jdo.option.ConnectionUserName</name>
-        <value>root</value>
+        <value>admin</value>
     </property>
     <property>
         <name>javax.jdo.option.ConnectionPassword</name>
-        <value>${env:MYSQL_ROOT_PASSWORD}</value>
+        <value>admin123</value>
     </property>
-    <property>
-        <name>fs.s3a.access.key</name>
-        <value>${env:MINIO_ROOT_USER}</value>
-    </property>
+
+    <!-- S3 Configuration -->
     <property>
         <name>fs.s3a.secret.key</name>
-        <value>${env:MINIO_ROOT_PASSWORD}</value>
+        <value>minio123</value>
     </property>
     <property>
         <name>fs.s3a.endpoint</name>
-        <value>${env:MINIO_URL}</value>
+        <value>http://minio:9000</value>
     </property>
     <property>
         <name>fs.s3a.path.style.access</name>
@@ -147,17 +118,5 @@
     <property>
         <name>fs.s3a.connection.ssl.enabled</name>
         <value>false</value>
-    </property>
-    <property>
-    <name>fs.s3a.impl</name>
-        <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
-    </property>
-    <property>
-        <name>fs.s3a.aws.credentials.provider</name>
-        <value>org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider</value>
-    </property>
-    <property>
-        <name>fs.s3a.block.size</name>
-        <value>134217728</value> <!-- 128MB -->
     </property>
 </configuration>

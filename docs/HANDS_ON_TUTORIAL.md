@@ -15,7 +15,6 @@ By completing this tutorial, you will:
 
 - Docker Desktop installed and running
 - Basic SQL knowledge
-- Command line familiarity
 - Text editor or IDE
 
 ## 🏃‍♂️ Quick Start
@@ -30,12 +29,10 @@ git clone https://github.com/brunolnetto/trino-dbt-spark
 cd trino-dbt-spark
 ```
 
-2. **Review the environment configuration**:
 ```bash
 # Examine the environment file
 cat .env
 
-# Review the docker-compose setup
 cat docker-compose.yml
 ```
 
@@ -47,7 +44,6 @@ make build
 # Start all services
 make up
 
-# Verify services are running
 docker-compose ps
 ```
 
@@ -58,90 +54,77 @@ watch docker-compose ps
 ```
 
 **Expected Output**: All services should show "healthy" status.
-
 ### Exercise 2: Data Source Setup
 
-**Goal**: Load sample e-commerce data into MySQL
+**Goal**: Load sample e-commerce data into PostgreSQL
 
-1. **Connect to MySQL as root**:
+1. **Connect to PostgreSQL as the default user**:
 ```bash
-make to_mysql_root
+make to_psql
 ```
 
 2. **Create the database and user**:
 ```sql
 CREATE DATABASE brazillian_ecommerce;
-USE brazillian_ecommerce;
-GRANT ALL PRIVILEGES ON *.* TO admin;
-SHOW GLOBAL VARIABLES LIKE 'LOCAL_INFILE';
-SET GLOBAL LOCAL_INFILE=TRUE;
-exit
+CREATE USER admin WITH PASSWORD 'admin';
+GRANT ALL PRIVILEGES ON DATABASE brazillian_ecommerce TO admin;
+\c brazillian_ecommerce
 ```
 
-3. **Connect as regular user**:
-```bash
-make to_mysql
-```
-
-4. **Create table schemas**:
+3. **Create table schemas**:
 ```sql
 -- Orders table
 CREATE TABLE olist_orders_dataset (
-    order_id VARCHAR(50) PRIMARY KEY,
-    customer_id VARCHAR(50),
-    order_status VARCHAR(20),
-    order_purchase_timestamp DATETIME,
-    order_approved_at DATETIME,
-    order_delivered_carrier_date DATETIME,
-    order_delivered_customer_date DATETIME,
-    order_estimated_delivery_date DATETIME
+  order_id VARCHAR(50) PRIMARY KEY,
+  customer_id VARCHAR(50),
+  order_status VARCHAR(20),
+  order_approved_at TIMESTAMP,
+  order_delivered_carrier_date TIMESTAMP,
+  order_delivered_customer_date TIMESTAMP
 );
 
--- Order items table  
+-- Order items table
 CREATE TABLE olist_order_items_dataset (
-    order_id VARCHAR(50),
-    order_item_id INT,
-    product_id VARCHAR(50),
-    seller_id VARCHAR(50),
-    shipping_limit_date DATETIME,
-    price DECIMAL(10,2),
-    freight_value DECIMAL(10,2)
+  order_id VARCHAR(50),
+  order_item_id INT,
+  product_id VARCHAR(50),
+  seller_id VARCHAR(50),
+  shipping_limit_date TIMESTAMP,
+  price DECIMAL(10,2),
+  freight_value DECIMAL(10,2)
 );
 
 -- Products table
 CREATE TABLE olist_products_dataset (
-    product_id VARCHAR(50) PRIMARY KEY,
-    product_category_name VARCHAR(100),
-    product_name_lenght INT,
-    product_description_lenght INT,
-    product_photos_qty INT,
-    product_weight_g INT,
-    product_length_cm INT,
-    product_height_cm INT,
-    product_width_cm INT
+  product_id VARCHAR(50) PRIMARY KEY,
+  product_category_name VARCHAR(100),
+  product_name_lenght INT,
+  product_description_lenght INT,
+  product_photos_qty INT,
+  product_weight_g INT,
+  product_length_cm INT,
+  product_height_cm INT,
+  product_width_cm INT
 );
 
 -- Payments table
 CREATE TABLE olist_order_payments_dataset (
-    order_id VARCHAR(50),
-    payment_sequential INT,
-    payment_type VARCHAR(20),
-    payment_installments INT,
-    payment_value DECIMAL(10,2)
+  order_id VARCHAR(50),
+  payment_sequential INT,
+  payment_type VARCHAR(20),
+  payment_installments INT,
+  payment_value DECIMAL(10,2)
 );
 
 -- Category translation table
 CREATE TABLE product_category_name_translation (
-    product_category_name VARCHAR(100),
-    product_category_name_english VARCHAR(100)
+  product_category_name VARCHAR(100),
+  product_category_name_english VARCHAR(100)
 );
 ```
 
-5. **Load sample data using seeds**:
+4. **Load sample data using seeds**:
 ```bash
-# Exit MySQL and return to project directory
-exit
-
 # Load dbt seeds (CSV files)
 cd ecom_analytics
 make seed
@@ -149,8 +132,8 @@ make seed
 
 **Verification**: Check that data was loaded:
 ```bash
-make to_mysql
-USE brazillian_ecommerce;
+make to_psql
+\c brazillian_ecommerce
 SELECT COUNT(*) FROM olist_orders_dataset;
 SELECT COUNT(*) FROM olist_products_dataset;
 ```

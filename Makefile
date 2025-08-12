@@ -23,11 +23,11 @@ FULL_REFRESH ?= --full-refresh
 
 
 .PHONY: build up down restart \
-	to_mysql to_mysql_root to_psql \
+	to_psql \
 	run_bronze run_external run_silver run_gold run_all \
 	seed install_deps docs select test lint
 
-lint:
+lint-fix:
 	sqlfluff fix --dialect trino ecom_analytics/models/**/*.sql
 
 # Docker helpers
@@ -41,9 +41,6 @@ down:
 	$(DOCKER_COMPOSE) down
 
 restart: down up
-
-to_mysql:
-	docker exec -it de_mysql mysql -u"root" -p"${MYSQL_ROOT_PASSWORD}"
 
 to_psql:
 	docker exec -ti de_psql psql postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}

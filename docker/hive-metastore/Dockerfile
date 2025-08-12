@@ -3,12 +3,11 @@ FROM eclipse-temurin:8-jre AS downloads
 
 ARG HADOOP_VERSION=3.2.0
 ARG METASTORE_VERSION=3.0.0
-ARG MYSQL_CONNECTOR_VER=8.0.33
+ARG POSTGRES_CONNECTOR_VER=42.7.3
 
 WORKDIR /downloads
 
 
-# Download all artifacts in separate layers for better caching
 RUN set -ex; \
     curl -fL "https://archive.apache.org/dist/hive/hive-standalone-metastore-${METASTORE_VERSION}/hive-standalone-metastore-${METASTORE_VERSION}-bin.tar.gz" \
     -o hive-metastore.tar.gz && \
@@ -22,16 +21,16 @@ RUN set -ex; \
     ls -l hadoop.tar.gz
 
 RUN set -ex; \
-    curl -fL "https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/${MYSQL_CONNECTOR_VER}/mysql-connector-j-${MYSQL_CONNECTOR_VER}.jar" \
-    -o mysql-connector-j.jar && \
-    echo "MySQL connector downloaded successfully" && \
-    ls -l mysql-connector-j.jar
+    curl -fL "https://repo1.maven.org/maven2/org/postgresql/postgresql/${POSTGRES_CONNECTOR_VER}/postgresql-${POSTGRES_CONNECTOR_VER}.jar" \
+    -o postgresql-jdbc.jar && \
+    echo "PostgreSQL JDBC connector downloaded successfully" && \
+    ls -l postgresql-jdbc.jar
 
 FROM eclipse-temurin:8-jre
 
 ARG HADOOP_VERSION=3.2.0
 ARG METASTORE_VERSION=3.0.0
-ARG MYSQL_CONNECTOR_VER=8.0.33
+ARG POSTGRES_CONNECTOR_VER=42.7.3
 
 ENV HADOOP_VERSION=${HADOOP_VERSION} \
     METASTORE_VERSION=${METASTORE_VERSION} \
@@ -68,18 +67,16 @@ RUN set -ex; \
     ls -la /opt/
 
 
-# Set up MySQL connector
-COPY --from=downloads /downloads/mysql-connector-j.jar ${HIVE_HOME}/lib/mysql-connector-java-${MYSQL_CONNECTOR_VER}.jar
-RUN chmod 644 ${HIVE_HOME}/lib/mysql-connector-java-${MYSQL_CONNECTOR_VER}.jar
+COPY --from=downloads /downloads/postgresql-jdbc.jar ${HIVE_HOME}/lib/postgresql-jdbc-${POSTGRES_CONNECTOR_VER}.jar
+RUN chmod 644 ${HIVE_HOME}/lib/postgresql-jdbc-${POSTGRES_CONNECTOR_VER}.jar
 
 # Copy configurations
 COPY conf/metastore-site.xml conf/core-site.xml ${HIVE_HOME}/conf/
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Set up classpath
-ENV HIVE_AUX_JARS_PATH=${HIVE_HOME}/lib/mysql-connector-java-${MYSQL_CONNECTOR_VER}.jar \
-    HADOOP_CLASSPATH=${HADOOP_CLASSPATH}:${HIVE_HOME}/lib/mysql-connector-java-${MYSQL_CONNECTOR_VER}.jar
+ENV HIVE_AUX_JARS_PATH=${HIVE_HOME}/lib/postgresql-jdbc-${POSTGRES_CONNECTOR_VER}.jar \
+    HADOOP_CLASSPATH=${HADOOP_CLASSPATH}:${HIVE_HOME}/lib/postgresql-jdbc-${POSTGRES_CONNECTOR_VER}.jar
 
 # Set up user and permissions in a single layer
 RUN groupadd -r hive && \

@@ -1,34 +1,6 @@
 version: "3.9"
 
 services:
-
-  de_mysql:
-    image: "mariadb"
-    container_name: de_mysql
-    command: --max_connections=500
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-          cpus: '2'
-        reservations:
-          memory: 1G
-          cpus: '1'
-    healthcheck:
-      test: ["CMD", "mariadb-admin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./docker/mysql/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
-    ports:
-      - "3306:3306"
-    env_file:
-      - .env
-    networks:
-      - data_network
       
   de_psql:
     image: postgres:15
@@ -123,15 +95,10 @@ services:
       - ./docker/hive-metastore/conf/log4j.properties:/opt/hive/conf/log4j.properties
       - hive_logs:/var/log/hive
       - metastore_logs:/var/log/metastore
-      - ${PWD}/warehouse:/user/hive/warehouse
-    environment:
-      METASTORE_DB_HOSTNAME: ${MYSQL_HOST}
-      HIVE_CLASSPATH: /opt/hive/lib/mysql-connector-java-8.0.33.jar
+      - ./warehouse:/user/hive/warehouse
     networks:
       - data_network
     depends_on:
-      de_mysql:
-        condition: service_healthy
       minio:
         condition: service_healthy
 
@@ -287,7 +254,6 @@ services:
 
 volumes:
   psql_data:
-  mysql_data:
   minio_data:
   spark_logs:
   trino_logs:

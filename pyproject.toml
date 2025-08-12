@@ -1,0 +1,12 @@
+[project]
+name = "trino-dbt-spark"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "dbt-core>=1.10.8",
+    "dbt-postgres>=1.9.0",
+    "dbt-spark[pyhive,session]>=1.9.3",
+    "dbt-trino>=1.9.3",
+]

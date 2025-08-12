@@ -109,7 +109,7 @@ make run_all FULL_REFRESH=""
 - Silver: Business rules and referential integrity
 - Gold: Aggregation and final validation
 
-For detailed technical implementation, see the [Technical Deep Dive](./TECHNICAL_DEEP_DIVE.md).
+For detailed technical implementation, see the [Technical Deep Dive](./docs/TECHNICAL_DEEP_DIVE.md).
 
 ## 🎯 Use Cases and Applications
 
@@ -159,4 +159,4 @@ This project is open source and available for educational and commercial use.
 
 ---
 
-**Ready to learn?** Start with the [📚 Learning Index](./LEARNING_INDEX.md) to choose your learning path!
+**Ready to learn?** Start with the [📚 Learning Index](./docs/LEARNING_INDEX.md) to choose your learning path!

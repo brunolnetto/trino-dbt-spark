@@ -26,7 +26,6 @@ make restart
 ```bash
 # Source Data (seeds)
 make seed          # Load CSV files into warehouse
-make run_external  # Configure external tables
 
 # PostgreSQL (analytics)
 make to_psql
@@ -46,7 +45,6 @@ make run_all                    # Seed → Bronze → Silver → Gold
 # Individual layers  
 make seed                       # Load CSV seeds
 make run_bronze                 # Raw data ingestion (Trino)
-make run_external              # External table staging
 make run_silver                # Data transformations (Spark)
 make run_gold                  # Analytics aggregations (Trino+PostgreSQL)
 

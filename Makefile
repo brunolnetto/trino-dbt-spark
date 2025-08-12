@@ -21,10 +21,14 @@ SELECT_GOLD := gold
 #   make run_all FULL_REFRESH=    -> disables full-refresh (incremental mode)
 FULL_REFRESH ?= --full-refresh
 
+
 .PHONY: build up down restart \
-        to_mysql to_mysql_root to_psql \
-        run_bronze run_external run_silver run_gold run_all \
-        seed install_deps docs select test
+	to_mysql to_mysql_root to_psql \
+	run_bronze run_external run_silver run_gold run_all \
+	seed install_deps docs select test lint
+
+lint:
+	sqlfluff fix --dialect trino ecom_analytics/models/**/*.sql
 
 # Docker helpers
 build:

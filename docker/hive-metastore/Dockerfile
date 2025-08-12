@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1.4
 FROM eclipse-temurin:8-jre AS downloads
 
 ARG HADOOP_VERSION=3.2.0
@@ -6,7 +5,6 @@ ARG METASTORE_VERSION=3.0.0
 ARG POSTGRES_CONNECTOR_VER=42.7.3
 
 WORKDIR /downloads
-
 
 RUN set -ex; \
     curl -fL "https://archive.apache.org/dist/hive/hive-standalone-metastore-${METASTORE_VERSION}/hive-standalone-metastore-${METASTORE_VERSION}-bin.tar.gz" \
@@ -72,16 +70,26 @@ RUN chmod 644 ${HIVE_HOME}/lib/postgresql-jdbc-${POSTGRES_CONNECTOR_VER}.jar
 
 # Copy configurations
 COPY conf/metastore-site.xml conf/core-site.xml ${HIVE_HOME}/conf/
+COPY conf/log4j.properties ${HIVE_HOME}/conf/
+COPY conf/metastore-log4j2.properties ${HIVE_HOME}/conf/
+COPY conf/log4j2.properties ${HIVE_HOME}/conf/
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+# Fix SLF4J binding conflicts by removing the conflicting binding
+RUN find ${HADOOP_HOME} -name "*slf4j-log4j12*.jar" -exec rm {} \; || true 
+RUN touch ${HIVE_HOME}/conf/hive-log4j2.properties
+
 ENV HIVE_AUX_JARS_PATH=${HIVE_HOME}/lib/postgresql-jdbc-${POSTGRES_CONNECTOR_VER}.jar \
-    HADOOP_CLASSPATH=${HADOOP_CLASSPATH}:${HIVE_HOME}/lib/postgresql-jdbc-${POSTGRES_CONNECTOR_VER}.jar
+    HADOOP_CLASSPATH=${HADOOP_CLASSPATH}:${HIVE_HOME}/lib/postgresql-jdbc-${POSTGRES_CONNECTOR_VER}.jar \
+    HADOOP_OPTS="-Dlog4j.configurationFile=file:${HIVE_HOME}/conf/metastore-log4j2.properties" \
+    HIVE_OPTS="-Dlog4j.configurationFile=file:${HIVE_HOME}/conf/metastore-log4j2.properties"
 
 # Set up user and permissions in a single layer
 RUN groupadd -r hive && \
     useradd -r -g hive -d ${HIVE_HOME} hive && \
-    chown -R hive:hive ${HIVE_HOME} /entrypoint.sh
+    mkdir -p /var/log/hive /var/log/metastore && \
+    chown -R hive:hive ${HIVE_HOME} /entrypoint.sh /var/log/hive /var/log/metastore
 
 USER hive
 WORKDIR ${HIVE_HOME}

@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<configuration>
+	<!-- Connection Pool Settings -->
+	<property>
+		<name>datanucleus.connectionPool.maxPoolSize</name>
+		<value>20</value>
+	</property>
+	<property>
+		<name>datanucleus.connectionPool.minPoolSize</name>
+		<value>5</value>
+	</property>
+	<property>
+		<name>datanucleus.connectionPool.maxIdle</name>
+		<value>10</value>
+	</property>
+	<property>
+		<name>datanucleus.connectionPool.testSQL</name>
+		<value>SELECT 1</value>
+	</property>
+	<property>
+		<name>datanucleus.connectionPool.maxActive</name>
+		<value>30</value>
+	</property>
+	<property>
+		<name>datanucleus.connection.releaseAfterUse</name>
+		<value>true</value>
+	</property>
+	<property>
+		<name>fs.s3a.impl</name>
+		<value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
+	</property>
+	<property>
+		<name>fs.s3a.aws.credentials.provider</name>
+		<value>org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider</value>
+	</property>
+	<property>
+		<name>fs.s3a.block.size</name>
+		<value>134217728</value>
+		<!-- 128MB -->
+	</property>
+	<!-- Warehouse and Schema Configuration -->
+	<property>
+		<name>metastore.warehouse.dir</name>
+		<value>s3a://warehouse/</value>
+		<description>Location of default database for the warehouse</description>
+	</property>
+	<property>
+		<name>metastore.schema.verification</name>
+		<value>true</value>
+	</property>
+	<property>
+		<name>metastore.schema.verification.record.version</name>
+		<value>true</value>
+	</property>
+	<!-- Authentication and Authorization -->
+	<property>
+		<name>hadoop.security.authorization</name>
+		<value>false</value>
+	</property>
+	<!-- Automatic Schema Update -->
+	<property>
+		<name>datanucleus.autoCreateSchema</name>
+		<value>true</value>
+	</property>
+	<property>
+		<name>datanucleus.fixedDatastore</name>
+		<value>false</value>
+	</property>
+	<property>
+		<name>datanucleus.autoCreateTables</name>
+		<value>true</value>
+	</property>
+	<!-- Metastore Thrift Endpoint -->
+	<property>
+		<name>metastore.thrift.uris</name>
+		<value>thrift://0.0.0.0:9083</value>
+		<description>Thrift URI for the remote metastore. Used by metastore client to connect to remote metastore.</description>
+	</property>
+	<!-- Performance Tuning -->
+	<property>
+		<name>metastore.task.threads.always</name>
+		<value>org.apache.hadoop.hive.metastore.events.EventCleanerTask,org.apache.hadoop.hive.metastore.MaterializationsCacheCleanerTask</value>
+	</property>
+	<property>
+		<name>metastore.expression.proxy</name>
+		<value>org.apache.hadoop.hive.metastore.DefaultPartitionExpressionProxy</value>
+	</property>
+	<property>
+		<name>metastore.client.socket.timeout</name>
+		<value>600</value>
+		<description>MetaStore Client socket timeout in seconds</description>
+	</property>
+	<!-- Database Connection -->
+	<property>
+		<name>javax.jdo.option.ConnectionDriverName</name>
+		<value>org.postgresql.Driver</value>
+	</property>
+	<property>
+		<name>javax.jdo.option.ConnectionURL</name>
+		<value>jdbc:postgresql://de_psql:5432/metastore_db</value>
+	</property>
+	<property>
+		<name>javax.jdo.option.ConnectionUserName</name>
+		<value>admin</value>
+	</property>
+	<property>
+		<name>javax.jdo.option.ConnectionPassword</name>
+		<value>admin123</value>
+	</property>
+	<!-- S3 Configuration -->
+	<property>
+		<name>fs.s3a.access.key</name>
+		<value>minio</value>
+	</property>
+	<property>
+		<name>fs.s3a.secret.key</name>
+		<value>minio123</value>
+	</property>
+	<property>
+		<name>fs.s3a.endpoint</name>
+		<value>http://minio:9000</value>
+	</property>
+	<property>
+		<name>fs.s3a.path.style.access</name>
+		<value>true</value>
+	</property>
+	<property>
+		<name>fs.s3a.connection.ssl.enabled</name>
+		<value>false</value>
+	</property>
+	<!-- Thrift Protocol Configuration -->
+	<property>
+		<name>hive.server2.thrift.compact</name>
+		<value>true</value>
+		<description>Use compact protocol for Thrift transport</description>
+	</property>
+	<property>
+		<name>hive.server2.thrift.framed</name>
+		<value>true</value>
+		<description>Use framed transport for Thrift</description>
+	</property>
+	<property>
+		<name>metastore.server.max.threads</name>
+		<value>100</value>
+		<description>Maximum number of worker threads in the metastore server thread pool</description>
+	</property>
+	<property>
+		<name>metastore.server.min.threads</name>
+		<value>20</value>
+		<description>Minimum number of worker threads in the metastore server thread pool</description>
+	</property>
+</configuration>

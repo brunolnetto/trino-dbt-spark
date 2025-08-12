@@ -1,5 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <configuration>
-    <!-- Database Authentication -->
+    <!-- Connection Pool Settings -->
+    <property>
+        <name>datanucleus.connectionPool.maxPoolSize</name>
+        <value>20</value>
+    </property>
+    <property>
+        <name>datanucleus.connectionPool.minPoolSize</name>
+        <value>5</value>
+    </property>
+    <property>
+        <name>datanucleus.connectionPool.maxIdle</name>
+        <value>10</value>
+    </property>
+    <property>
+        <name>datanucleus.connectionPool.testSQL</name>
+        <value>SELECT 1</value>
+    </property>
+    <property>
+        <name>datanucleus.connectionPool.maxActive</name>
+        <value>30</value>
+    </property>
+    <property>
+        <name>datanucleus.connection.releaseAfterUse</name>
+        <value>true</value>
+    </property>
     <property>
         <name>fs.s3a.impl</name>
         <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
@@ -40,26 +65,16 @@
         <value>true</value>
     </property>
     <property>
+        <name>datanucleus.autoStartMechanismMode</name>
+        <value>ignored</value>
+    </property>
+    <property>
         <name>datanucleus.fixedDatastore</name>
         <value>false</value>
     </property>
     <property>
         <name>datanucleus.autoCreateTables</name>
         <value>true</value>
-    </property>
-    
-    <!-- Connection Pool Settings -->
-    <property>
-        <name>datanucleus.connectionPool.maxPoolSize</name>
-        <value>50</value>
-    </property>
-    <property>
-        <name>datanucleus.connectionPool.minPoolSize</name>
-        <value>10</value>
-    </property>
-    <property>
-        <name>datanucleus.connectionPool.maxIdle</name>
-        <value>30</value>
     </property>
     
     <!-- Metastore Thrift Endpoint -->
@@ -104,6 +119,10 @@
 
     <!-- S3 Configuration -->
     <property>
+        <name>fs.s3a.access.key</name>
+        <value>minio</value>
+    </property>
+    <property>
         <name>fs.s3a.secret.key</name>
         <value>minio123</value>
     </property>
@@ -118,5 +137,37 @@
     <property>
         <name>fs.s3a.connection.ssl.enabled</name>
         <value>false</value>
+    </property>
+    
+    <!-- Thrift Protocol Configuration -->
+    <property>
+        <name>metastore.thrift.compact</name>
+        <value>true</value>
+        <description>Use compact protocol for Thrift transport</description>
+    </property>
+    <property>
+        <name>metastore.thrift.framed</name>
+        <value>true</value>
+        <description>Use framed transport for Thrift</description>
+    </property>
+    <property>
+        <name>hive.metastore.server.max.threads</name>
+        <value>100</value>
+        <description>Maximum number of worker threads in the metastore server thread pool</description>
+    </property>
+    <property>
+        <name>hive.metastore.server.min.threads</name>
+        <value>20</value>
+        <description>Minimum number of worker threads in the metastore server thread pool</description>
+    </property>
+    <property>
+        <name>hive.metastore.server.tcp.keepalive</name>
+        <value>true</value>
+        <description>Whether to enable TCP keepalive for the metastore server</description>
+    </property>
+    <property>
+        <name>hive.metastore.client.connect.retry.delay</name>
+        <value>5</value>
+        <description>Number of seconds for the client to wait between consecutive connection attempts</description>
     </property>
 </configuration>

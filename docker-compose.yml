@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
       
   de_psql:
@@ -15,12 +13,11 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-postgres}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      METABASE_DB: ${METABASE_DB:-metabase}
-      METABASE_DB_USER: ${METABASE_DB_USER:-metabase}
-      METABASE_DB_PASSWORD: ${METABASE_DB_PASSWORD:-metabase123}
     volumes:
       - psql_data:/var/lib/postgresql/data
       - ./docker/psql/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+      - ./docker/psql/custom-entrypoint.sh:/usr/local/bin/custom-entrypoint.sh:ro
+    entrypoint: ["/usr/local/bin/custom-entrypoint.sh"]
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     env_file:
@@ -55,6 +52,21 @@ services:
       - .env
     networks:
       - data_network
+  
+  minio-init:
+    image: minio/mc
+    container_name: minio_init
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["/scripts/minio_setup.sh"]
+    env_file:
+      - .env
+    volumes:
+      - ./docker/minio/:/scripts/:ro
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - data_network
 
   hive-metastore:
     build:
@@ -76,34 +88,32 @@ services:
         max_attempts: 3
         window: 120s
     healthcheck:
-      test: 
-        - "CMD-SHELL"
-        - |
-          jps | grep -q 'RunJar' && 
-          nc -z localhost 9083 && 
-          wget -q -O- http://localhost:9083 || exit 1
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      test: ["CMD-SHELL", "nc -z localhost 9083 && echo 'Hive Metastore port 9083 is open' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    environment:
+      - HADOOP_OPTS="-Dmetastore.thrift.compact=true -Dmetastore.thrift.framed=true -Dhive.metastore.client.connect.retry.delay=5 -Dhive.server2.transport.mode=binary"
     ports:
       - "9083:9083"
     env_file:
       - .env 
     volumes:
-      - ./docker/hive-metastore/conf:/opt/hive/conf
-      - ./docker/hive-metastore/conf/log4j.properties:/opt/hive/conf/log4j.properties
+      - ./docker/hive-metastore/conf:/opt/apache-hive-metastore-3.0.0-bin/conf
       - hive_logs:/var/log/hive
       - metastore_logs:/var/log/metastore
-      - ./warehouse:/user/hive/warehouse
+      - warehouse_data:/user/hive/warehouse
     networks:
       - data_network
     depends_on:
       minio:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
 
   trino:
-    image: "trinodb/trino"
+    image: "trinodb/trino:427"
     container_name: trino
     hostname: trino
     deploy:
@@ -129,6 +139,7 @@ services:
       - "8080:8080"
     volumes:
       - ./docker/trino:/etc/trino
+      - ./docker/trino/conf:/etc/trino/conf
       - trino_logs:/var/log/trino
     networks:
       - data_network
@@ -142,7 +153,7 @@ services:
       - SPARK_MODE=master
       - SPARK_LOCAL_IP=spark-master
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      test: ["CMD-SHELL", "curl -f http://$(hostname):8080 || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -152,10 +163,9 @@ services:
         condition: service_healthy
     ports:
       - "7077:7077"
-      - "8080:8080"
+      - "8081:8080"
     volumes:
-      - ./docker/spark/conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf
-      - ./docker/spark/conf/log4j.properties:/opt/bitnami/spark/conf/log4j.properties
+      - ./docker/spark/conf/:/opt/bitnami/spark/conf/
       - spark_logs:/opt/bitnami/spark/logs
       - ./docker/logrotate.conf:/etc/logrotate.d/spark
     networks:
@@ -163,14 +173,18 @@ services:
 
   spark-worker:
     image: docker.io/bitnami/spark:3.3
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=2G
+      - SPARK_WORKER_CORES=1
     env_file:
       - .env
     volumes:
-      - ./docker/spark/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf
-      - ./docker/spark/conf/log4j.properties:/opt/bitnami/spark/conf/log4j.properties
+      - ./docker/spark/conf/:/opt/bitnami/spark/conf/
       - spark_logs:/opt/bitnami/spark/logs
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8081 && jps | grep -q 'Worker'"]
+      test: ["CMD-SHELL", "ps -ef | grep -v grep | grep 'org.apache.spark.deploy.worker.Worker' || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -190,8 +204,14 @@ services:
       context: ./docker/spark
       dockerfile: ./Dockerfile
     container_name: "spark-thrift-server"
+    environment:
+      - SPARK_MODE=master
+      - SPARK_LOCAL_IP=spark-thrift-server
+      - HOME=/opt/bitnami/spark
+      - USER=spark
+    user: "1001"
     healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 10000 && jps | grep -q 'HiveThriftServer2'"]
+      test: ["CMD-SHELL", "ps -ef | grep -v grep | grep 'HiveThriftServer2' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 6
@@ -201,17 +221,20 @@ services:
         condition: service_healthy
       hive-metastore:
         condition: service_healthy
-      spark-worker:
-        condition: service_healthy
     ports:
       - "4040:4040"
       - "10000:10000"
     command: >
       sh -c "
-        ./sbin/start-thriftserver.sh --driver-java-options '-Dhive.metastore.uris=thrift://hive-metastore:9083' --master spark://spark-master:7077
+        mkdir -p /opt/bitnami/spark/.ivy2/local /opt/bitnami/spark/tmp && 
+        touch /opt/bitnami/spark/tmp/nss_passwd && 
+        chmod -R 777 /opt/bitnami/spark/.ivy2 /opt/bitnami/spark/tmp && 
+        sleep 30 && 
+        ./sbin/start-thriftserver.sh --driver-java-options '-Dhive.metastore.uris=thrift://hive-metastore:9083 -DHADOOP_USER_NAME=spark' --master spark://spark-master:7077
       "
     volumes:
-      - ./docker/spark/conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf
+      - ./docker/spark/conf/:/opt/bitnami/spark/conf/
+      - spark_logs:/opt/bitnami/spark/logs
     networks:
       - data_network
 
@@ -223,14 +246,6 @@ services:
       - /dev/urandom:/dev/random:ro
     ports:
       - 3000:3000
-    environment:
-      MB_DB_TYPE: postgres
-      MB_DB_DBNAME: ${METABASE_DB:-metabase}
-      MB_DB_PORT: ${POSTGRES_PORT:-5432}
-      MB_DB_USER: ${METABASE_DB_USER:-metabase}
-      MB_DB_PASS: ${METABASE_DB_PASSWORD:-metabase123}
-      MB_DB_HOST: de_psql
-      JAVA_TIMEZONE: ${TZ:-UTC}
     env_file:
       - .env
     networks:
@@ -259,6 +274,7 @@ volumes:
   trino_logs:
   hive_logs:
   metastore_logs:
+  warehouse_data:
 
 networks:
   data_network:

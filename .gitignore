@@ -127,7 +127,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-minio/
 dbt_packages/
 .idea/
-psql/
+

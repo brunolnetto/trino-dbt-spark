@@ -74,7 +74,7 @@ def data_pipeline():    # Bronze: dbt seeds loaded into Apache Iceberg
     """)
 ```
 
-SELECT * FROM {{ source('orders') }}
+## 📊 dbt Implementation Patterns
 
 ### Profile Strategy Pattern
 
@@ -83,6 +83,8 @@ The multi-profile approach allows engine-specific optimizations:
 ```yaml
 # profiles.yml - Engine-specific configurations
 trino:
+  outputs:
+    dev:
       type: trino
       # Optimized for fast federated queries
       threads: 1  # Trino handles parallelism internally
@@ -115,7 +117,7 @@ gold:
 }}
 
 -- Simple replication with full partition refresh
-SELECT * FROM {{ source('warehouse', 'bronze_orders') }}
+SELECT * FROM {{ source('mysql', 'orders') }}
 {% if is_incremental() %}
     WHERE updated_at > (SELECT MAX(updated_at) FROM {{ this }})
 {% endif %}
@@ -238,7 +240,7 @@ services:
 
 ```bash
 # .env file pattern - Centralized configuration
-WAREHOUSE_S3=s3://warehouse
+MYSQL_HOST=de_mysql
 POSTGRES_HOST=de_psql
 MINIO_URL=http://minio:9000
 

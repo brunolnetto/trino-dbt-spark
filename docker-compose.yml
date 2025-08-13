@@ -16,8 +16,6 @@ services:
     volumes:
       - psql_data:/var/lib/postgresql/data
       - ./docker/psql/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
-      - ./docker/psql/custom-entrypoint.sh:/usr/local/bin/custom-entrypoint.sh:ro
-    entrypoint: ["/usr/local/bin/custom-entrypoint.sh"]
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     env_file:

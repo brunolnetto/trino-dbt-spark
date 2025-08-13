@@ -69,7 +69,7 @@ COPY --from=downloads /downloads/postgresql-jdbc.jar ${HIVE_HOME}/lib/postgresql
 RUN chmod 644 ${HIVE_HOME}/lib/postgresql-jdbc-${POSTGRES_CONNECTOR_VER}.jar
 
 # Copy configurations
-COPY conf/metastore-site.xml conf/core-site.xml ${HIVE_HOME}/conf/
+COPY conf/metastore-site.xml ${HIVE_HOME}/conf/
 COPY conf/log4j.properties ${HIVE_HOME}/conf/
 COPY conf/metastore-log4j2.properties ${HIVE_HOME}/conf/
 COPY conf/log4j2.properties ${HIVE_HOME}/conf/

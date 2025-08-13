@@ -22,37 +22,64 @@ This project implements a Modern Data Engineering stack using Trino, dbt, and Sp
 
 ## Key Conventions
 
+### Multi-Engine dbt Setup
+- **Profile Configuration**:
+  - Bronze: Trino for data lake ingestion (`warehouse.bronze`)
+  - Silver: Spark for heavy transformations (`iceberg.silver`)
+  - Gold: PostgreSQL for analytics (`de_psql.gold`)
+
 ### dbt Models Structure
-- `models/bronze/`: Raw data ingestion, 1:1 mapping with source, using Iceberg
-- `models/silver/`: Cleaned dimension/fact tables with relationships
-- `models/gold/`: Business-specific aggregations in PostgreSQL
+- `models/bronze/`: Raw data ingestion
+  - 1:1 mapping with source
+  - Iceberg tables with basic partitioning
+  - Example: `olist_orders.sql`
+
+- `models/silver/`: Business entities
+  - Fact/dimension modeling with optimized joins
+  - Partitioned and clustered Iceberg tables
+  - Examples: `fact_sales.sql`, `dim_products.sql`
+
+- `models/gold/`: Analytics models
+  - Business metrics and KPIs
+  - Optimized for BI query patterns
+  - Example: `sales_values_by_category.sql`
 
 ### Model Configuration Patterns
 ```yaml
-# Bronze layer - Raw ingestion (models/bronze/)
+# Bronze layer - Raw ingestion
 config(
     materialized='incremental',
+    unique_key='order_id',  # Primary business key
     incremental_strategy='delete+insert',
-    file_format='iceberg',
-    meta={
-        'layer': 'bronze',
-        'owner': 'data_engineering'
-    }
+    partition_by=['order_purchase_timestamp'],
+    clustered_by=['customer_id'],
+    buckets=16
 )
 
-# Silver layer - Curated data (models/silver/)
+# Silver layer - Fact tables
 config(
     materialized='incremental',
-    unique_key='<primary_key>',
+    unique_key='order_id',
     incremental_strategy='merge',
-    partition_by=['<date_column>'],
-    clustered_by=['<join_keys>'],
-    buckets=16,
-    meta={
-        'layer': 'silver',
-        'owner': 'data_engineering'
-    }
+    partition_by=['order_purchase_timestamp'],
+    clustered_by=['customer_id', 'product_id'],  # Join optimization
+    buckets=16
 )
+
+# Gold layer - Analytics
+config(
+    materialized='table',  # Optimized for read performance
+    schema='gold'
+)
+
+### Testing Patterns
+- **Schema Tests**: Required in `schema.yml` files
+  - Not null constraints
+  - Referential integrity
+  - Uniqueness constraints
+- **Generic Tests**: Reusable business rules in `tests/generic/`
+  - Value validation (e.g., `reasonable_payment_value`)
+  - Data quality checks (e.g., `valid_category_counts`)
 ```
 
 ## Development Workflow

@@ -1,5 +1,20 @@
 <configuration>
 	<property>
+		<n>javax.jdo.option.ConnectionDriverName</n>
+		<value>org.postgresql.Driver</value>
+	</property>
+	<property>
+		<n>javax.jdo.option.ConnectionURL</n>
+		<value>jdbc:postgresql://${env:POSTGRES_HOST}:${env:POSTGRES_PORT}/${env:POSTGRES_DB}</value>
+	</property>
+	<property>
+		<n>javax.jdo.option.ConnectionUserName</n>
+		<value>${env:POSTGRES_USER}</value>
+	</property>
+	<property>
+		<n>javax.jdo.option.ConnectionPassword</n>
+		<value>${env:POSTGRES_PASSWORD}</value>
+	</property><property>
 		<name>javax.jdo.option.ConnectionDriverName</name>
 		<value>com.postgresql.cj.jdbc.Driver</value>
 	</property>

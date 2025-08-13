@@ -152,18 +152,28 @@ make run_all FULL_REFRESH=""  # Incremental processing
 - **Hive Metastore**: Central metadata service for Iceberg tables
   - Connection: `thrift://hive-metastore:9083`
   - Backend: PostgreSQL database
+  - ⚠️ Verify PostgreSQL driver configuration in `hive-site.xml`
   
 - **MinIO/S3**: Object storage for Bronze/Silver layers
   - Internal endpoint: `http://minio:9000`
   - External endpoint: Configure via `MINIO_URL`
-  - Credentials via environment variables
+  - ⚠️ Use environment variables instead of hardcoded credentials
+  - ⚠️ Configure in ONE place and reference elsewhere
 
 - **Spark**: Processing engine for transformations
   - Iceberg integration via Spark extensions
-  - S3 access configured via pre-hooks
-  - Optimized for large-scale processing
+  - S3 access via pre-hooks
+  - ⚠️ Remove unused MySQL connector if using PostgreSQL
+  - ⚠️ Clean up or implement template files in `conf/`
 
 - **Trino**: Query engine for data lake
   - Iceberg catalog configuration
   - PostgreSQL connector for Gold layer
   - Direct MinIO integration
+  - ⚠️ Unify S3 credentials with other services
+
+### Known Issues
+1. **Configuration Redundancy**: S3/MinIO credentials are duplicated across services
+2. **Legacy MySQL Artifacts**: Remove if using PostgreSQL exclusively
+3. **Template Files**: Several `.template` files need implementation or cleanup
+4. **Security**: Move hardcoded credentials to environment variables

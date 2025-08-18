@@ -3,177 +3,55 @@
 This project implements a Modern Data Engineering stack using Trino, dbt, and Spark following the Medallion Architecture pattern.
 
 ## Architecture & Data Flow
+- **Medallion Architecture**: Bronze (raw) → Silver (cleaned) → Gold (business) layers
+- **Data Pipeline**: CSV seeds → Bronze (dbt, Trino, Iceberg, MinIO) → Silver (Spark, Iceberg) → Gold (PostgreSQL, Trino) → Metabase (BI)
+- **Engine Selection**: Each layer uses the optimal engine for its workload; see `dbt_project.yml` and `profiles.yml` for configuration.
+- **Storage**: Bronze/Silver in Iceberg tables on MinIO (S3); Gold in PostgreSQL
 
-### Core Architecture
-- **Medallion Architecture**: Data flows through Bronze (raw) → Silver (cleaned) → Gold (business) layers
-- **Storage Pattern**: 
-  - Bronze/Silver: Apache Iceberg tables in MinIO (S3) for ACID compliance and versioning
-  - Gold: PostgreSQL for optimized analytics queries
-- **Processing Strategy**:
-  - Bronze: Minimal processing, schema validation (Trino)
-  - Silver: Heavy transformations, joins, deduplication (Spark)
-  - Gold: Business metrics, aggregations (PostgreSQL)
+## Developer Workflow
+- **Build/Start**: `make build` (containers), `make up` (services)
+- **Pipeline Execution**: `cd ecom_analytics && make run_all` (full pipeline), or `make run_bronze`, `make run_silver`, `make run_gold` for layer-specific runs
+- **Data Seeding**: `make seed` loads CSVs from `seeds/`
+- **Testing**: `make test` runs dbt tests; schema and generic tests in `models/*/schema.yml` and `tests/generic/`
+- **Debugging**: Use `dbt run --models <model> --debug` and inspect compiled SQL in `target/compiled/`
+- **Docs**: `make docs` generates documentation (see `docs/`)
 
-### Design Principles
-- Raw data preservation in Bronze for auditability
-- Progressive data enhancement through layers
-- Engine selection optimized per workload
-- Clear data contracts between layers
+## Key Conventions & Patterns
+- **dbt Models**:
+  - `models/bronze/`: 1:1 source mapping, incremental (delete+insert), partitioned by business key
+  - `models/silver/`: Fact/dim models, incremental (merge), partitioned/clustered for query optimization
+  - `models/gold/`: Analytics, materialized as tables, optimized for BI
+- **Testing**: Mandatory not-null, uniqueness, referential integrity in `schema.yml`; reusable business tests in `tests/generic/`
+- **Profiles**: Multi-engine setup in `profiles.yml` (Trino for Bronze, Spark for Silver, PostgreSQL for Gold)
+- **Integration**:
+  - MinIO/S3: Centralized config via env vars (`MINIO_URL`, etc.)
+  - Hive Metastore: Metadata for Iceberg tables
+  - Trino: Federated queries, connects to both Iceberg and PostgreSQL
+  - Spark: Heavy ETL, reads/writes Iceberg
+  - Metabase: Connects to Gold layer for BI
 
-## Key Conventions
+## Infrastructure & Configuration
+- **Docker Compose**: All services orchestrated; see `docker-compose.yml` and `docker/` for service configs
+- **Environment Variables**: All credentials and endpoints managed via env vars; avoid hardcoding
+- **Health Checks**: Service dependencies managed via health checks in compose
 
-### Multi-Engine dbt Setup
-- **Profile Configuration**:
-  - Bronze: Trino for data lake ingestion (`warehouse.bronze`)
-  - Silver: Spark for heavy transformations (`iceberg.silver`)
-  - Gold: PostgreSQL for analytics (`de_psql.gold`)
+## Examples
+- **Bronze Model**: `models/bronze/olist_orders.sql` (incremental, partitioned)
+- **Silver Model**: `models/silver/fact_sales.sql` (business logic, merge strategy)
+- **Gold Model**: `models/gold/sales_values_by_category.sql` (analytics, table materialization)
+- **Test**: `models/silver/schema.yml` (not_null, unique, accepted_range)
+- **Pipeline Command**:
+  ```bash
+  make build && make up
+  cd ecom_analytics && make run_all
+  ```
 
-### dbt Models Structure
-- `models/bronze/`: Raw data ingestion
-  - 1:1 mapping with source
-  - Iceberg tables with basic partitioning
-  - Example: `olist_orders.sql`
+## Tips for AI Agents
+- Always reference engine-specific configs in `profiles.yml` and model configs in `dbt_project.yml`
+- Use layer-specific patterns for incremental logic and partitioning
+- Validate all new models with schema and generic tests
+- Prefer environment variables for all credentials and endpoints
+- Document new models and tests in `docs/` and `schema.yml`
 
-- `models/silver/`: Business entities
-  - Fact/dimension modeling with optimized joins
-  - Partitioned and clustered Iceberg tables
-  - Examples: `fact_sales.sql`, `dim_products.sql`
-
-- `models/gold/`: Analytics models
-  - Business metrics and KPIs
-  - Optimized for BI query patterns
-  - Example: `sales_values_by_category.sql`
-
-### Model Configuration Patterns
-```yaml
-# Bronze layer - Raw ingestion
-config(
-    materialized='incremental',
-    unique_key='order_id',  # Primary business key
-    incremental_strategy='delete+insert',
-    partition_by=['order_purchase_timestamp'],
-    clustered_by=['customer_id'],
-    buckets=16
-)
-
-# Silver layer - Fact tables
-config(
-    materialized='incremental',
-    unique_key='order_id',
-    incremental_strategy='merge',
-    partition_by=['order_purchase_timestamp'],
-    clustered_by=['customer_id', 'product_id'],  # Join optimization
-    buckets=16
-)
-
-# Gold layer - Analytics
-config(
-    materialized='table',  # Optimized for read performance
-    schema='gold'
-)
-
-### Testing Patterns
-- **Schema Tests**: Required in `schema.yml` files
-  - Not null constraints
-  - Referential integrity
-  - Uniqueness constraints
-- **Generic Tests**: Reusable business rules in `tests/generic/`
-  - Value validation (e.g., `reasonable_payment_value`)
-  - Data quality checks (e.g., `valid_category_counts`)
-```
-
-## Development Workflow
-
-### Local Setup & Pipeline Execution
-```bash
-make build            # Build containers
-make up              # Start services
-cd ecom_analytics    
-make run_all         # Full pipeline execution
-make test            # Run dbt tests
-
-# Selective Processing
-make run_bronze      # Process Bronze layer only
-make run_silver      # Process Silver layer only
-make run_gold        # Process Gold layer only
-make run_all FULL_REFRESH=""  # Incremental processing
-```
-
-### Common Development Tasks
-
-#### Adding New Models
-1. **Bronze Models**: 
-   - Copy pattern from `models/bronze/olist_orders.sql`
-   - Add source definition in `models/bronze/sources.yml`
-   - Always preserve raw data structure
-
-2. **Silver Models**:
-   - Follow pattern in `models/silver/fact_sales.sql` 
-   - Implement proper incremental logic
-   - Define clear grain in documentation
-
-3. **Data Quality**:
-   - Mandatory schema tests in `schema.yml`
-   - Generic tests in `tests/generic/`
-   - Custom tests per business rules
-
-## Integration Points
-- **MinIO (Data Lake)**:
-  - Endpoint: `MINIO_URL` environment variable
-  - Credentials: `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`
-  - Pre-hooks handle S3 authentication in models
-  
-- **Spark Configuration**:
-  - Connection settings in dbt models
-  - Pre-hooks for S3 authentication
-  - Partitioning and clustering configs
-
-- **PostgreSQL (DW)**:
-  - Connection profiles in `profiles.yml`
-  - Optimized for analytics queries
-  - Used for Gold layer tables
-
-## Project Organization
-- `/ecom_analytics/`: dbt project root
-  - `models/<layer>/`: Layered transformation logic
-  - `tests/generic/`: Reusable test suites
-  - `macros/`: Utility functions
-- `/docker/`: Service configurations
-  - `trino/`: Query engine with Iceberg catalog
-  - `spark/`: Processing engine configuration
-  - `hive-metastore/`: Metadata service for Iceberg
-  - `psql/`: Analytics database (Gold layer)
-  - `minio/`: S3-compatible storage
-- `/docs/`: Implementation guides
-
-## Infrastructure Notes
-
-### Service Configuration
-- **Hive Metastore**: Central metadata service for Iceberg tables
-  - Connection: `thrift://hive-metastore:9083`
-  - Backend: PostgreSQL database
-  - ⚠️ Verify PostgreSQL driver configuration in `hive-site.xml`
-  
-- **MinIO/S3**: Object storage for Bronze/Silver layers
-  - Internal endpoint: `http://minio:9000`
-  - External endpoint: Configure via `MINIO_URL`
-  - ⚠️ Use environment variables instead of hardcoded credentials
-  - ⚠️ Configure in ONE place and reference elsewhere
-
-- **Spark**: Processing engine for transformations
-  - Iceberg integration via Spark extensions
-  - S3 access via pre-hooks
-  - ⚠️ Remove unused MySQL connector if using PostgreSQL
-  - ⚠️ Clean up or implement template files in `conf/`
-
-- **Trino**: Query engine for data lake
-  - Iceberg catalog configuration
-  - PostgreSQL connector for Gold layer
-  - Direct MinIO integration
-  - ⚠️ Unify S3 credentials with other services
-
-### Known Issues
-1. **Configuration Redundancy**: S3/MinIO credentials are duplicated across services
-2. **Legacy MySQL Artifacts**: Remove if using PostgreSQL exclusively
-3. **Template Files**: Several `.template` files need implementation or cleanup
-4. **Security**: Move hardcoded credentials to environment variables
+---
+If any section is unclear or missing, please provide feedback for further refinement.

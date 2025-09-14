@@ -32,9 +32,10 @@ This project demonstrates a complete modern data engineering stack. Choose your 
 **Perfect for**: Comprehensive understanding and production readiness
 
 1. **Complete all learning materials**
-2. **[BEST_PRACTICES.md](./BEST_PRACTICES.md)** - Production patterns and optimization
-3. **[TECHNICAL_DEEP_DIVE.md](./TECHNICAL_DEEP_DIVE.md)** - Performance and scalability
-4. **Real-world application** - Adapt patterns to your use cases
+2. **[ORCHESTRATION_GUIDE.md](../ORCHESTRATION_GUIDE.md)** - Production orchestration and operational patterns
+3. **[BEST_PRACTICES.md](./BEST_PRACTICES.md)** - Production patterns and optimization
+4. **[TECHNICAL_DEEP_DIVE.md](./TECHNICAL_DEEP_DIVE.md)** - Performance and scalability
+5. **Real-world application** - Adapt patterns to your use cases
 
 ## 📖 Learning Materials Guide
 
@@ -89,6 +90,28 @@ This project demonstrates a complete modern data engineering stack. Choose your 
 
 **Best For**: Teams implementing production data pipelines
 
+### 🚀 [ORCHESTRATION_GUIDE.md](../ORCHESTRATION_GUIDE.md)
+**Purpose**: Production-ready pipeline orchestration and operations  
+**Topics Covered**:
+- Enhanced Makefile orchestration system with 500+ lines of operational capabilities
+- Comprehensive error handling, backup, and rollback strategies
+- Real-time monitoring, performance tracking, and detailed reporting
+- Infrastructure health validation and dependency management
+- Structured logging with execution IDs and audit trails
+- Operational best practices for production data pipelines
+
+**Best For**: DevOps engineers, production teams, operational excellence focus
+
+### 📚 [QUICK_REFERENCE.md](./QUICK_REFERENCE.md)
+**Purpose**: Quick command reference and troubleshooting guide
+**Topics Covered**:
+- Essential commands for daily operations
+- Common troubleshooting scenarios and solutions
+- Performance tuning quick wins
+- Emergency procedures and recovery commands
+
+**Best For**: Daily operational use, quick problem resolution
+
 ## 🎯 Learning Objectives by Material
 
 | Material | Key Learning Outcomes |
@@ -97,6 +120,8 @@ This project demonstrates a complete modern data engineering stack. Choose your 
 | **HANDS_ON_TUTORIAL** | Build working data pipelines, implement transformations, handle real data |
 | **TECHNICAL_DEEP_DIVE** | Master advanced patterns, optimization techniques, and scaling strategies |
 | **BEST_PRACTICES** | Apply production-ready patterns, implement governance, ensure reliability |
+| **ORCHESTRATION_GUIDE** | Master production orchestration, error handling, monitoring, and operational excellence |
+| **QUICK_REFERENCE** | Quick operational commands, troubleshooting, and daily pipeline management |
 
 ## 🛣️ Suggested Learning Paths
 
@@ -117,6 +142,12 @@ HANDS_ON_TUTORIAL → LEARNING_GUIDE → TECHNICAL_DEEP_DIVE → BEST_PRACTICES
 LEARNING_GUIDE (Overview) → HANDS_ON_TUTORIAL (Exercises 1-5) → BEST_PRACTICES (Selected patterns)
 ```
 **Best for**: Tight deadlines, proof-of-concept implementations
+
+### Path 4: Operational Excellence (Production Focus)
+```
+LEARNING_GUIDE → ORCHESTRATION_GUIDE → BEST_PRACTICES → HANDS_ON_TUTORIAL (Advanced exercises)
+```
+**Best for**: Production teams, DevOps engineers, operational reliability focus
 
 ### Path 4: Comprehensive Mastery (Complete Understanding)
 ```

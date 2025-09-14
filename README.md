@@ -38,16 +38,16 @@ This project serves as a comprehensive learning resource for modern data enginee
 This project implements a **Medallion Architecture** using multiple engines optimized for different workloads:
 
 ```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   Source    │    │   Bronze    │    │   Silver    │    │    Gold     │    │     BI      │
-│   (CSV)     │───>│  (Iceberg)  │───>│  (Iceberg)  │───>│(PostgreSQL) │───>│ (Metabase)  │
-│             │    │             │    │             │    │             │    │             │
-│ • Orders    │    │ • Raw Data  │    │ • Cleaned   │    │ • Analytics │    │ • Dashboard │
-│ • Products  │    │ • Type Cast │    │ • Joined    │    │ • Aggregated│    │ • Reports   │
-│ • Payments  │    │ • Validated │    │ • Enhanced  │    │ • Optimized │    │ • Self-Serve│
-└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
-      dbt               Trino            Spark           PostgreSQL         Metabase
-     Seeds             Bronze            Silver             Gold              BI
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌──────────────┐    ┌──────────────┐
+│   Source    │    │   Bronze    │    │   Silver    │    │    Gold      │    │     BI       │
+│   (CSV)     │───>│  (Iceberg)  │───>│  (Iceberg)  │───>│ (PostgreSQL) │───>│ (Metabase)   │
+│             │    │             │    │             │    │              │    │              │
+│ • Orders    │    │ • Raw Data  │    │ • Cleaned   │    │ • Analytics  │    │ • Dashboard  │
+│ • Products  │    │ • Type Cast │    │ • Joined    │    │ • Aggregated │    │ • Reports    │
+│ • Payments  │    │ • Validated │    │ • Enhanced  │    │ • Optimized  │    │ • Self-Serve │
+└─────────────┘    └─────────────┘    └─────────────┘    └──────────────┘    └──────────────┘
+      dbt               Trino            Spark             PostgreSQL            Metabase
+     Seeds             Bronze            Silver               Gold                  BI
 ```
 
 ### Technology Stack

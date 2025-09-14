@@ -40,7 +40,7 @@ This project implements a **Medallion Architecture** using multiple engines opti
 ```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
 │   Source    │    │   Bronze    │    │   Silver    │    │    Gold     │    │     BI      │
-│   (CSV)     │───▶│  (Iceberg)  │───▶│  (Iceberg)  │───▶│(PostgreSQL) │───▶│ (Metabase)  │
+│   (CSV)     │───>│  (Iceberg)  │───>│  (Iceberg)  │───>│(PostgreSQL) │───>│ (Metabase)  │
 │             │    │             │    │             │    │             │    │             │
 │ • Orders    │    │ • Raw Data  │    │ • Cleaned   │    │ • Analytics │    │ • Dashboard │
 │ • Products  │    │ • Type Cast │    │ • Joined    │    │ • Aggregated│    │ • Reports   │

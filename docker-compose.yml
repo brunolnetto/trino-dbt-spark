@@ -137,7 +137,6 @@ services:
       - "8080:8080"
     volumes:
       - ./docker/trino:/etc/trino
-      - ./docker/trino/conf:/etc/trino/conf
       - trino_logs:/var/log/trino
     networks:
       - data_network
@@ -170,7 +169,9 @@ services:
       - data_network
 
   spark-worker:
-    image: docker.io/bitnami/spark:3.3
+    build:
+      context: ./docker/spark
+      dockerfile: ./Dockerfile
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
@@ -237,7 +238,7 @@ services:
       - data_network
 
   metabase:
-    image: metabase/metabase:latest
+    image: metabase/metabase:v0.47.4
     container_name: metabase
     hostname: metabase
     volumes:

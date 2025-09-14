@@ -74,6 +74,17 @@ make build  # Build all Docker containers
 make up     # Start all services (wait 2-3 minutes for health checks)
 ```
 
+### dbt Profile Configuration
+Before running the data pipeline, you need to set up your dbt profiles:
+
+```bash
+cd ecom_analytics
+cp profiles.yml.example profiles.yml
+# Edit profiles.yml if needed (default configuration should work with Docker setup)
+```
+
+**Note**: The `profiles.yml` file contains connection credentials and is excluded from version control for security.
+
 ### Data Pipeline Execution
 
 The data pipeline uses dbt seeds to load the initial data and then processes it through the medallion architecture layers:

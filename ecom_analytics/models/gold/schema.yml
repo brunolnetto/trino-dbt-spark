@@ -1,0 +1,137 @@
+version: 2
+
+models:
+  - name: sales_values_by_category
+    description: "Monthly sales analytics by product category with performance metrics and growth calculations"
+    meta:
+      owner: "analytics_team"
+      layer: "gold"
+      business_domain: "sales_performance"
+      update_frequency: "daily"
+      business_purpose: "Category performance analysis for business intelligence and strategic planning"
+    columns:
+      - name: monthly
+        description: "Month in YYYY-MM-01 format for time series analysis"
+        data_type: date
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= '2016-01-01'"
+      
+      - name: year_num
+        description: "Year extracted from monthly date"
+        data_type: integer
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 2016
+              max_value: 2030
+      
+      - name: month_num
+        description: "Month number (1-12) extracted from monthly date"
+        data_type: integer
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+              max_value: 12
+      
+      - name: category
+        description: "Product category name in English"
+        data_type: string
+        tests:
+          - not_null
+      
+      - name: total_sales
+        description: "Total sales revenue for the category in the month"
+        data_type: decimal
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      
+      - name: total_orders
+        description: "Total number of completed orders for the category"
+        data_type: integer
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      
+      - name: total_items_sold
+        description: "Total number of items sold in the category"
+        data_type: integer
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      
+      - name: avg_revenue_per_order
+        description: "Average revenue per order for the category"
+        data_type: decimal
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      
+      - name: avg_revenue_per_item
+        description: "Average revenue per item sold in the category"
+        data_type: decimal
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      
+      - name: category_share_pct
+        description: "Category's percentage share of total monthly sales"
+        data_type: decimal
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+      
+      - name: category_rank
+        description: "Category ranking by sales volume within the month (1 = highest sales)"
+        data_type: integer
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+      
+      - name: performance_tier
+        description: "Performance tier classification (Top 3, Top 10, Other)"
+        data_type: string
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Top 3', 'Top 10', 'Other']
+      
+      - name: month_over_month_growth_pct
+        description: "Month-over-month growth percentage compared to previous month"
+        data_type: decimal
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: -100
+              max_value: 1000
+              config:
+                severity: warn
+      
+      - name: active_days
+        description: "Number of days in the month with sales activity for this category"
+        data_type: integer
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+              max_value: 31
+
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "total_sales = (total_orders * avg_revenue_per_order)"
+          config:
+            severity: warn
+      - dbt_utils.expression_is_true:
+          expression: "total_items_sold >= total_orders"
+          config:
+            severity: error

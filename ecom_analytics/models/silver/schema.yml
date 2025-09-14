@@ -1,0 +1,167 @@
+version: 2
+
+models:
+  - name: dim_products
+    description: "Product dimension table with enriched product information including category translations"
+    meta:
+      owner: "data_engineering"
+      layer: "silver"
+      business_domain: "product_catalog"
+    columns:
+      - name: product_id
+        description: "Unique identifier for each product"
+        data_type: string
+        tests:
+          - unique
+          - not_null
+      
+      - name: product_category_name
+        description: "Original product category name in Portuguese"
+        data_type: string
+        tests:
+          - not_null
+      
+      - name: product_category_name_english
+        description: "Product category name translated to English"
+        data_type: string
+        tests:
+          - not_null
+      
+      - name: product_name_lenght
+        description: "Length of product name in characters"
+        data_type: integer
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 500
+      
+      - name: product_description_lenght
+        description: "Length of product description in characters"
+        data_type: integer
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 5000
+      
+      - name: product_photos_qty
+        description: "Number of product photos"
+        data_type: integer
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 20
+      
+      - name: product_weight_g
+        description: "Product weight in grams"
+        data_type: decimal
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 50000
+      
+      - name: product_length_cm
+        description: "Product length in centimeters"
+        data_type: decimal
+      
+      - name: product_height_cm
+        description: "Product height in centimeters"
+        data_type: decimal
+      
+      - name: product_width_cm
+        description: "Product width in centimeters"
+        data_type: decimal
+
+  - name: fact_sales
+    description: "Comprehensive sales fact table combining orders, items, and payments with business metrics"
+    meta:
+      owner: "data_engineering"
+      layer: "silver"
+      business_domain: "sales_analytics"
+      update_frequency: "daily"
+    columns:
+      - name: order_id
+        description: "Unique identifier for each order"
+        data_type: string
+        tests:
+          - not_null
+          - relationships:
+              to: ref('olist_orders')
+              field: order_id
+      
+      - name: order_item_id
+        description: "Sequential number identifying items within the same order"
+        data_type: integer
+        tests:
+          - not_null
+      
+      - name: customer_id
+        description: "Unique identifier for each customer"
+        data_type: string
+        tests:
+          - not_null
+      
+      - name: order_purchase_timestamp
+        description: "Timestamp when the order was purchased"
+        data_type: timestamp
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= '2016-01-01'"
+      
+      - name: product_id
+        description: "Unique identifier for each product"
+        data_type: string
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_products')
+              field: product_id
+      
+      - name: item_price
+        description: "Price of the individual item"
+        data_type: decimal
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 10000
+      
+      - name: proportional_payment_value
+        description: "Payment value allocated proportionally to this item based on item price ratio"
+        data_type: decimal
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 10000
+      
+      - name: order_status_category
+        description: "Standardized order status categories for business analysis"
+        data_type: string
+        tests:
+          - accepted_values:
+              values: ['Completed', 'In Progress', 'Canceled', 'Other']
+      
+      - name: delivery_days
+        description: "Number of days between order purchase and delivery"
+        data_type: integer
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 365
+      
+      - name: estimated_delivery_days
+        description: "Number of days between order purchase and estimated delivery"
+        data_type: integer
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 365
+
+    tests:
+      - dbt_utils.equal_rowcount:
+          compare_model: ref('olist_order_items')
+      - dbt_utils.expression_is_true:
+          expression: "proportional_payment_value <= order_total_payment"
+          config:
+            severity: warn

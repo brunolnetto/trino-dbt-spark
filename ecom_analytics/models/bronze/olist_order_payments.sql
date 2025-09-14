@@ -1,6 +1,8 @@
 {{
     config(
-        unique_key="order_id"
+        materialized='incremental',
+        unique_key=['order_id', 'payment_sequential'],
+        incremental_strategy='delete+insert'
     )
 }}
 

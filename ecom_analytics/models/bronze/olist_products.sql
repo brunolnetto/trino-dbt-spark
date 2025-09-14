@@ -1,6 +1,10 @@
 {{
     config(
-        unique_key="product_id"
+        materialized='incremental',
+        unique_key='product_id',
+        incremental_strategy='delete+insert',
+        clustered_by=['product_category_name'],
+        buckets=8
     )
 }}
 
@@ -14,4 +18,4 @@ SELECT
     product_length_cm,
     product_height_cm,
     product_width_cm
-FROM {{ source('landing', 'olist_products_dataset') }}
+FROM {{ source('landing_zone', 'olist_products_dataset') }}

@@ -1,9 +1,9 @@
 {{
         config(
             materialized='incremental',
-            unique_key='order_item_id',
+            unique_key=['order_id', 'order_item_id'],
             incremental_strategy='delete+insert',
-            partition_by=['order_id'],
+            partition_by=['shipping_limit_date'],
             clustered_by=['product_id'],
             buckets=16
         )

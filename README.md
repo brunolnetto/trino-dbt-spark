@@ -62,7 +62,7 @@ This project implements a **Medallion Architecture** using multiple engines opti
 | **🗄️ PostgreSQL** | Analytics data warehouse | 15 | Optimized for BI workloads |
 | **📊 Metabase** | Business intelligence platform | v0.47.4 | Self-service analytics & dashboards |
 | **🐝 Hive Metastore** | Metadata catalog | 3.0.0 | Schema registry for data lake |
-- **Trino**: Distributed SQL query engine (optional for direct querying)
+| **🚀 Enhanced Makefile** | Production orchestration system | Custom | Error handling, monitoring, logging, rollback |
 
 ## 🎯 What You'll Learn
 
@@ -119,6 +119,33 @@ This project uses the **Brazilian E-Commerce Public Dataset by Olist**, a real-w
 - **Operational Metrics**: Delivery performance, order fulfillment
 
 ## 🛠️ Getting Started
+
+### 🚀 Pipeline Orchestration
+
+This project includes a **production-ready orchestration system** with comprehensive monitoring, error handling, and operational capabilities. See the **[📋 Orchestration Guide](./ORCHESTRATION_GUIDE.md)** for detailed information about:
+
+- **Error Handling**: Automatic backup creation, cleanup on failures, and rollback capabilities
+- **Monitoring**: Real-time pipeline monitoring, performance tracking, and detailed reporting
+- **Validation**: Infrastructure health checks, dependency validation, and data quality gates
+- **Logging**: Structured logging with execution IDs, timestamps, and comprehensive audit trails
+
+#### Quick Orchestration Commands
+```bash
+# Execute complete pipeline with monitoring
+make run_all
+
+# Monitor pipeline in real-time
+make monitor_pipeline
+
+# Check pipeline status and health
+make status
+
+# Generate performance reports
+make performance_report
+
+# Rollback on failures
+make rollback_layer LAYER=bronze|silver|gold
+```
 
 ### Prerequisites
 - **Docker Desktop** and Docker Compose (v2.0+)

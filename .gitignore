@@ -134,3 +134,11 @@ dbt_packages/
 profiles.yml
 ecom_analytics/profiles.yml
 
+# Pipeline logs and reports (keep structure, ignore content)
+logs/pipeline/*.log
+reports/*.json
+backups/*.sql
+!logs/pipeline/.gitkeep
+!reports/.gitkeep
+!backups/.gitkeep
+

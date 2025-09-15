@@ -34,26 +34,31 @@ fact_sales AS (
         roi.price AS item_price,
         roi.freight_value,
         -- Calculate proportional payment value for this item
-        ROUND(
-            (roi.price / order_items_total.total_order_items_value) * opa.total_payment_value, 
-            2
-        ) AS proportional_payment_value,
         opa.total_payment_value AS order_total_payment,
         opa.payment_count,
         opa.payment_types,
         ro.order_status,
+        ROUND(
+            (roi.price / order_items_total.total_order_items_value)
+            * opa.total_payment_value,
+            2
+        ) AS proportional_payment_value,
         -- Business metrics
-        CASE 
+        CASE
             WHEN ro.order_status = 'delivered' THEN 'Completed'
             WHEN ro.order_status IN ('shipped', 'processing') THEN 'In Progress'
             WHEN ro.order_status = 'canceled' THEN 'Canceled'
             ELSE 'Other'
         END AS order_status_category,
-        
+
         -- Date calculations
-        DATEDIFF(day, ro.order_purchase_timestamp, ro.order_delivered_customer_date) AS delivery_days,
-        DATEDIFF(day, ro.order_purchase_timestamp, ro.order_estimated_delivery_date) AS estimated_delivery_days
-    
+        DATEDIFF(
+            day, ro.order_purchase_timestamp, ro.order_delivered_customer_date
+        ) AS delivery_days,
+        DATEDIFF(
+            day, ro.order_purchase_timestamp, ro.order_estimated_delivery_date
+        ) AS estimated_delivery_days
+
     FROM {{ ref('olist_orders') }} AS ro
     INNER JOIN {{ ref('olist_order_items') }} AS roi
         ON ro.order_id = roi.order_id
@@ -61,16 +66,17 @@ fact_sales AS (
         ON ro.order_id = opa.order_id
     LEFT JOIN (
         -- Calculate total items value per order for proportional allocation
-        SELECT 
+        SELECT
             order_id,
             SUM(price) AS total_order_items_value
         FROM {{ ref('olist_order_items') }}
         GROUP BY order_id
     ) AS order_items_total
         ON ro.order_id = order_items_total.order_id
-    
+
     -- Only include orders with valid data
-    WHERE ro.order_purchase_timestamp IS NOT NULL
+    WHERE
+        ro.order_purchase_timestamp IS NOT NULL
         AND roi.price >= 0
         AND roi.freight_value >= 0
 )

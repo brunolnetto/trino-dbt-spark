@@ -20,5 +20,6 @@ SELECT
     rp.product_width_cm,
     pcnt.product_category_name_english
 FROM {{ ref('olist_products') }} AS rp
-LEFT JOIN {{ source('landing_zone', 'product_category_name_translation') }} AS pcnt
+LEFT JOIN
+    {{ source('landing_zone', 'product_category_name_translation') }} AS pcnt
     ON rp.product_category_name = pcnt.product_category_name

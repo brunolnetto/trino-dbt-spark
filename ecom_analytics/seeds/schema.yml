@@ -13,15 +13,28 @@ seeds:
   - name: olist_order_items_dataset
     config:
       column_types:
+        order_item_id: integer
         shipping_limit_date: timestamp(6)
+        price: decimal(10,2)
+        freight_value: decimal(10,2)
   
   - name: olist_order_payments_dataset
     config:
-      column_types: {}
+      column_types:
+        payment_sequential: integer
+        payment_installments: integer
+        payment_value: decimal(10,2)
   
   - name: olist_products_dataset
     config:
-      column_types: {}
+      column_types:
+        product_name_lenght: integer
+        product_description_lenght: integer
+        product_photos_qty: integer
+        product_weight_g: integer
+        product_length_cm: integer
+        product_height_cm: integer
+        product_width_cm: integer
       
   - name: product_category_name_translation
     config:

@@ -14,7 +14,7 @@ DOCKER_COMPOSE := docker-compose --env-file .env
 # dbt settings (adjust if needed)
 DBT_PROJECT_DIR := ecom_analytics
 DBT_PROFILES_DIR := .
-DBT_PROFILE_BRONZE := trino
+DBT_PROFILE_BRONZE := bronze
 DBT_PROFILE_SILVER := spark
 DBT_PROFILE_GOLD := gold
 
@@ -30,7 +30,6 @@ FULL_REFRESH ?= --full-refresh
 
 # Pipeline execution settings
 PIPELINE_LOG_DIR := logs/pipeline
-PIPELINE_BACKUP_DIR := backups
 PIPELINE_REPORTS_DIR := reports
 EXECUTION_ID := $(shell date +%Y%m%d_%H%M%S)_$(shell echo $$RANDOM)
 LOG_FILE := $(PIPELINE_LOG_DIR)/pipeline_$(EXECUTION_ID).log
@@ -61,7 +60,7 @@ NC := \033[0m # No Color
 # Setup logging infrastructure
 setup_logging:
 	@echo "📋 Setting up pipeline logging infrastructure..."
-	@mkdir -p $(PIPELINE_LOG_DIR) $(PIPELINE_BACKUP_DIR) $(PIPELINE_REPORTS_DIR)
+	@mkdir -p $(PIPELINE_LOG_DIR) $(PIPELINE_REPORTS_DIR)
 	@echo "🕐 Pipeline execution started at: $(shell date)" | tee $(LOG_FILE)
 	@echo "🆔 Execution ID: $(EXECUTION_ID)" | tee -a $(LOG_FILE)
 	@echo "📊 Environment: $(shell echo $$USER)@$(shell hostname)" | tee -a $(LOG_FILE)
@@ -119,56 +118,14 @@ validate_data_quality: setup_logging
 
 # Validate infrastructure health
 validate_infrastructure: setup_logging
-	$(call log_status,"🏥 Checking infrastructure health...","$(BLUE)")
+	@echo "🏥 Checking infrastructure health..." | tee -a $(LOG_FILE)
 	@echo "Checking Docker containers..." | tee -a $(LOG_FILE)
 	@$(DOCKER_COMPOSE) ps >> $(LOG_FILE) 2>&1 || (echo "❌ Docker infrastructure check failed" | tee -a $(LOG_FILE) && exit 1)
 	@echo "Checking database connections..." | tee -a $(LOG_FILE)
-	@timeout 30 docker exec -i de_psql pg_isready >> $(LOG_FILE) 2>&1 || (echo "❌ PostgreSQL health check failed" | tee -a $(LOG_FILE) && exit 1)
-	@timeout 30 curl -f http://localhost:8080/v1/info/state >> $(LOG_FILE) 2>&1 || (echo "❌ Trino health check failed" | tee -a $(LOG_FILE) && exit 1)
-	@timeout 30 curl -f http://localhost:8081 >> $(LOG_FILE) 2>&1 || (echo "❌ Spark health check failed" | tee -a $(LOG_FILE) && exit 1)
-	$(call log_status,"✅ Infrastructure health check completed","$(GREEN)")
-
-# =============================================================================
-# BACKUP AND ROLLBACK FUNCTIONS
-# =============================================================================
-
-# Create backup of current state before major operations
-create_backup:
-	$(call log_status,"💾 Creating backup for layer $(LAYER)...","$(YELLOW)")
-	@backup_file="$(PIPELINE_BACKUP_DIR)/$(LAYER)_backup_$(EXECUTION_ID).sql"
-	@echo "-- Backup created at $(shell date)" > $$backup_file
-	@echo "-- Execution ID: $(EXECUTION_ID)" >> $$backup_file
-	@echo "-- Layer: $(LAYER)" >> $$backup_file
-	@if [ "$(LAYER)" = "bronze" ] || [ "$(LAYER)" = "silver" ]; then \
-		echo "-- Note: Iceberg tables - backup metadata only" >> $$backup_file; \
-		dbt ls --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROFILES_DIR) --profile $(DBT_PROFILE_BRONZE) --select $(LAYER) --output name >> $$backup_file 2>/dev/null || true; \
-	else \
-		echo "Backing up Gold layer tables..." | tee -a $(LOG_FILE); \
-		docker exec -i de_psql pg_dump -U $(POSTGRES_USER) -d $(POSTGRES_DB) --schema-only >> $$backup_file 2>/dev/null || true; \
-	fi
-	$(call log_status,"✅ Backup created: $$backup_file","$(GREEN)")
-
-# Rollback function for failed operations
-rollback_layer:
-	@if [ -z "$(LAYER)" ]; then \
-		echo "❌ Error: LAYER parameter is required. Usage: make rollback_layer LAYER=bronze|silver|gold"; \
-		exit 1; \
-	fi
-	$(call log_status,"🔄 Rolling back $(LAYER) layer...","$(YELLOW)")
-	@latest_backup=$$(ls -t $(PIPELINE_BACKUP_DIR)/$(LAYER)_backup_*.sql 2>/dev/null | head -1); \
-	if [ -z "$$latest_backup" ]; then \
-		echo "❌ No backup found for $(LAYER) layer" | tee -a $(LOG_FILE); \
-		exit 1; \
-	fi; \
-	echo "📋 Using backup: $$latest_backup" | tee -a $(LOG_FILE)
-	@if [ "$(LAYER)" = "gold" ]; then \
-		echo "🔄 Restoring Gold layer from backup..." | tee -a $(LOG_FILE); \
-		docker exec -i de_psql psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) < $$latest_backup >> $(LOG_FILE) 2>&1; \
-	else \
-		echo "⚠️  Iceberg layer rollback requires manual intervention" | tee -a $(LOG_FILE); \
-		echo "📋 Consider running with --full-refresh to reset $(LAYER) layer" | tee -a $(LOG_FILE); \
-	fi
-	$(call log_status,"✅ Rollback completed for $(LAYER) layer","$(GREEN)")
+	@docker exec de_psql pg_isready >> $(LOG_FILE) 2>&1 || (echo "❌ PostgreSQL health check failed" | tee -a $(LOG_FILE) && exit 1)
+	@curl -f http://localhost:8081/v1/info/state >> $(LOG_FILE) 2>&1 || (echo "❌ Trino health check failed" | tee -a $(LOG_FILE) && exit 1)
+	@curl -f http://localhost:8082 > /dev/null 2>&1 || (echo "❌ Spark health check failed" | tee -a $(LOG_FILE) && exit 1)
+	@echo "✅ Infrastructure health check completed" | tee -a $(LOG_FILE)
 
 # =============================================================================
 # PIPELINE EXECUTION WITH ERROR HANDLING
@@ -181,12 +138,11 @@ run_layer:
 		echo "Usage: make run_layer LAYER=bronze|silver|gold PROFILE=trino|spark|gold"; \
 		exit 1; \
 	fi
-	$(call log_status,"🚀 Starting $(LAYER) layer execution with $(PROFILE) profile...","$(BLUE)")
-	@$(MAKE) create_backup LAYER=$(LAYER) --no-print-directory
+	@echo "🚀 Starting $(LAYER) layer execution with $(PROFILE) profile..." | tee -a $(LOG_FILE)
 	$(call time_operation, \
-		dbt build --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROFILES_DIR) --profile $(PROFILE) --select $(LAYER) $(FULL_REFRESH) >> $(LOG_FILE) 2>&1, \
-		"$(LAYER) layer execution") || ($(call cleanup_on_error,$(LAYER)) && exit 1)
-	$(call log_status,"✅ $(LAYER) layer completed successfully","$(GREEN)")
+		cd $(DBT_PROJECT_DIR) && $(DBT_CMD) build --project-dir . --profiles-dir .. --profile $(PROFILE) --select $(LAYER) $(FULL_REFRESH) >> ../$(LOG_FILE) 2>&1, \
+		"$(LAYER) layer execution") || (echo "❌ $(LAYER) layer failed" | tee -a $(LOG_FILE) && exit 1)
+	@echo "✅ $(LAYER) layer completed successfully" | tee -a $(LOG_FILE)
 
 # Run_external with error handling
 run_external: setup_logging
@@ -284,11 +240,22 @@ run_gold:
 
 # Seed operation
 seed: setup_logging validate_infrastructure
-	$(call log_status,"🌱 Starting seed operation...","$(BLUE)")
-	$(call time_operation, \
-		dbt seed --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROFILES_DIR) --profile $(DBT_PROFILE_BRONZE) $(FULL_REFRESH) >> $(LOG_FILE) 2>&1, \
-		"Seed operation") || ($(call cleanup_on_error,"seed") && exit 1)
-	$(call log_status,"✅ Seed operation completed","$(GREEN)")
+	@echo "🌱 Starting seed operation..." | tee -a $(LOG_FILE)
+	@start_time=$$(date +%s); \
+	cd $(DBT_PROJECT_DIR) && \
+	export MINIO_URL=http://minio:9000 && \
+	export MINIO_ACCESS_KEY=minio && \
+	export MINIO_SECRET_KEY=minio123 && \
+	uv run dbt seed --project-dir . --profiles-dir .. --profile $(DBT_PROFILE_BRONZE) $(FULL_REFRESH) >> ../$(LOG_FILE) 2>&1; \
+	exit_code=$$?; \
+	end_time=$$(date +%s); \
+	duration=$$((end_time - start_time)); \
+	if [ $$exit_code -eq 0 ]; then \
+		echo "✅ Seed operation completed successfully in $${duration}s" | tee -a $(LOG_FILE); \
+	else \
+		echo "❌ Seed operation failed after $${duration}s with exit code $$exit_code" | tee -a $(LOG_FILE); \
+		exit $$exit_code; \
+	fi
 
 # Enhanced complete pipeline with comprehensive monitoring
 run_all: setup_logging validate_infrastructure validate_dependencies validate_data_quality
@@ -315,7 +282,6 @@ cleanup_logs:
 	@echo "🧹 Cleaning up old logs and reports..."
 	@find $(PIPELINE_LOG_DIR) -name "*.log" -mtime +7 -delete 2>/dev/null || true
 	@find $(PIPELINE_REPORTS_DIR) -name "*.json" -mtime +30 -delete 2>/dev/null || true
-	@find $(PIPELINE_BACKUP_DIR) -name "*_backup_*.sql" -mtime +7 -delete 2>/dev/null || true
 	@echo "✅ Cleanup completed"
 
 # Enhanced testing with reporting
@@ -476,6 +442,3 @@ help:
 	@echo "📁 Output Locations:"
 	@echo "  Logs:    $(PIPELINE_LOG_DIR)/"
 	@echo "  Reports: $(PIPELINE_REPORTS_DIR)/"
-	@echo "  Backups: $(PIPELINE_BACKUP_DIR)/"
-
-

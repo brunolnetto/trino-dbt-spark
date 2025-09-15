@@ -119,19 +119,20 @@ initialize_iceberg_catalog() {
     log_info "Initializing Iceberg catalog database..."
     
     # Create the database if it doesn't exist
-    if ! psql -lqt | cut -d \| -f 1 | grep -qw "$iceberg_db"; then
+    if ! psql -lqt --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" | cut -d \| -f 1 | grep -qw "$iceberg_db"; then
         log_info "Creating database $iceberg_db..."
         psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOF
-            CREATE DATABASE $iceberg_db;
+            CREATE DATABASE $iceberg_db WITH OWNER = $iceberg_user;
+            GRANT ALL PRIVILEGES ON DATABASE $iceberg_db TO $iceberg_user;
 EOF
     else
         log_info "Database $iceberg_db already exists"
     fi
     
-    # Initialize Iceberg metadata tables
-    log_info "Creating Iceberg metadata tables..."
+    # Initialize Iceberg JDBC catalog schema - these are the exact tables Iceberg expects
+    log_info "Creating Iceberg JDBC catalog schema..."
     psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$iceberg_db" <<-EOF
-        -- Iceberg catalog metadata tables
+        -- Iceberg JDBC catalog tables (matches Iceberg's JdbcCatalog expectations)
         CREATE TABLE IF NOT EXISTS iceberg_tables (
             catalog_name VARCHAR(255) NOT NULL,
             table_namespace VARCHAR(255) NOT NULL,
@@ -149,11 +150,29 @@ EOF
             PRIMARY KEY (catalog_name, namespace, property_key)
         );
         
+        -- Create default namespaces for the warehouse layers
+        INSERT INTO iceberg_namespace_properties (catalog_name, namespace, property_key, property_value)
+        VALUES 
+            ('warehouse', 'bronze', 'location', 's3://warehouse/bronze'),
+            ('warehouse', 'silver', 'location', 's3://warehouse/silver'),
+            ('warehouse', 'gold', 'location', 's3://warehouse/gold')
+        ON CONFLICT (catalog_name, namespace, property_key) DO NOTHING;
+        
         -- Create indexes for better performance
         CREATE INDEX IF NOT EXISTS idx_iceberg_tables_namespace 
             ON iceberg_tables (catalog_name, table_namespace);
         CREATE INDEX IF NOT EXISTS idx_iceberg_tables_name 
             ON iceberg_tables (catalog_name, table_namespace, table_name);
+            
+        -- Grant permissions to ensure Iceberg can write to these tables
+        GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO $iceberg_user;
+        GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO $iceberg_user;
+        GRANT USAGE ON SCHEMA public TO $iceberg_user;
+        
+        -- Verify the setup
+        SELECT 'Iceberg catalog tables created:' as status;
+        SELECT table_name FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name LIKE 'iceberg_%';
 EOF
     
     log_success "Iceberg catalog initialization completed"

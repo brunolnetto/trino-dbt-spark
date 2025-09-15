@@ -150,6 +150,7 @@ services:
     ports:
       - "7077:7077"
       - "8082:8080"
+      - "10000:10000"
     volumes:
       - spark_logs:/opt/spark/logs
     networks:

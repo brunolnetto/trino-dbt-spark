@@ -1,0 +1,28 @@
+version: 2
+
+seeds:
+  - name: olist_orders_dataset
+    config:
+      column_types:
+        order_purchase_timestamp: timestamp(6)
+        order_approved_at: timestamp(6)
+        order_delivered_carrier_date: timestamp(6)
+        order_delivered_customer_date: timestamp(6)
+        order_estimated_delivery_date: timestamp(6)
+  
+  - name: olist_order_items_dataset
+    config:
+      column_types:
+        shipping_limit_date: timestamp(6)
+  
+  - name: olist_order_payments_dataset
+    config:
+      column_types: {}
+  
+  - name: olist_products_dataset
+    config:
+      column_types: {}
+      
+  - name: product_category_name_translation
+    config:
+      column_types: {}

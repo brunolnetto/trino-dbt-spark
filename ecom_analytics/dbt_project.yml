@@ -28,36 +28,28 @@ clean-targets:         # directories to be removed by `dbt clean`
 
 # In this example config, we tell dbt to build all    +materialized: incremental
 models:
-  +persist_docs:
-      relation: true
-      columns: true
-  bronze:
-    +materialized: incremental
-    +incremental_strategy: delete+insert
-    +file_format: iceberg
-    +location_root: s3a://warehouse/bronze
-    meta:
-      owner: "data_eng"
-      layer: "bronze"
-  silver:
-    +materialized: incremental
-    +incremental_strategy: merge
-    +file_format: iceberg
-    +pre_hook:
-      - "SET spark.hadoop.fs.s3a.endpoint={{ env_var('MINIO_URL') }}"
-      - "SET spark.hadoop.fs.s3a.access.key={{ env_var('MINIO_ACCESS_KEY') }}"
-      - "SET spark.hadoop.fs.s3a.secret.key={{ env_var('MINIO_SECRET_KEY') }}"
-      - "SET spark.hadoop.fs.s3a.path.style.access=true"
-      - "SET spark.hadoop.fs.s3a.connection.ssl.enabled=false"
-      - "SET spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem"
-    +location_root: s3a://warehouse/silver
-    meta:
-      owner: "data_eng"
-      layer: "silver"
-  gold:
-    # Config indicated by + and applies to all files under models/example/
-    +materialized: table
-    +location_root: s3a://warehouse/gold
-    meta:
-      owner: "analytics_team"
+  ecom_analytics:
+    +persist_docs:
+        relation: true
+        columns: true
+    bronze:
+      +materialized: incremental
+      +incremental_strategy: delete+insert
+      +file_format: iceberg
+      +location_root: s3a://warehouse/bronze
+    silver:
+      +materialized: incremental
+      +incremental_strategy: merge
+      +file_format: iceberg
+      +pre_hook:
+        - "SET spark.hadoop.fs.s3a.endpoint={{ env_var('MINIO_URL') }}"
+        - "SET spark.hadoop.fs.s3a.access.key={{ env_var('MINIO_ACCESS_KEY') }}"
+        - "SET spark.hadoop.fs.s3a.secret.key={{ env_var('MINIO_SECRET_KEY') }}"
+        - "SET spark.hadoop.fs.s3a.path.style.access=true"
+        - "SET spark.hadoop.fs.s3a.connection.ssl.enabled=false"
+        - "SET spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem"
+      +location_root: s3a://warehouse/silver
+    gold:
+      +materialized: table
+      +location_root: s3a://warehouse/gold
       layer: "gold"

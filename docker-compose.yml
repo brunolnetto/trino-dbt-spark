@@ -66,54 +66,47 @@ services:
     networks:
       - data_network
 
-  hive-metastore:
+  # Alternative simpler catalog service
+  iceberg-rest:
     build:
-      context: ./docker/hive-metastore
-      dockerfile: ./Dockerfile
-    container_name: hive-metastore
-    hostname: hive-metastore    
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-          cpus: '2'
-        reservations:
-          memory: 2G
-          cpus: '1'
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-        window: 120s
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 9083 && echo 'Hive Metastore port 9083 is open' || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-    environment:
-      - HADOOP_OPTS="-Dmetastore.thrift.compact=true -Dmetastore.thrift.framed=true -Dhive.metastore.client.connect.retry.delay=5 -Dhive.server2.transport.mode=binary"
+      context: ./docker/iceberg-rest
+      dockerfile: Dockerfile
+    container_name: iceberg-rest
     ports:
-      - "9083:9083"
-    env_file:
-      - .env 
-    volumes:
-      - ./docker/hive-metastore/conf:/opt/apache-hive-metastore-3.0.0-bin/conf
-      - hive_logs:/var/log/hive
-      - metastore_logs:/var/log/metastore
-      - warehouse_data:/user/hive/warehouse
-    networks:
-      - data_network
+      - "8181:8181"
+    environment:
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER:-admin}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD:-password}
+      - AWS_REGION=us-east-1
+      - AWS_ENDPOINT_URL=http://minio:9000
+      - AWS_S3_ENDPOINT=http://minio:9000
+      - AWS_S3_PATH_STYLE_ACCESS=true
+      - CATALOG_WAREHOUSE=s3://warehouse/
+      - CATALOG_IO__IMPL=org.apache.iceberg.aws.s3.S3FileIO
+      - CATALOG_S3_ENDPOINT=http://minio:9000
+      - CATALOG_S3_PATH_STYLE_ACCESS=true
+      - CATALOG_S3_REGION=us-east-1
+      - CATALOG_S3_ACCESS_KEY_ID=${MINIO_ROOT_USER:-admin}
+      - CATALOG_S3_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD:-password}
+      - CATALOG_CATALOG__IMPL=org.apache.iceberg.jdbc.JdbcCatalog
+      - CATALOG_URI=jdbc:postgresql://de_psql:5432/iceberg_catalog
+      - CATALOG_JDBC_USER=${POSTGRES_USER:-admin}
+      - CATALOG_JDBC_PASSWORD=${POSTGRES_PASSWORD:-admin123}
     depends_on:
       minio:
         condition: service_healthy
-      minio-init:
-        condition: service_completed_successfully
+      de_psql:
+        condition: service_healthy
+    # Built-in healthcheck from Dockerfile
+    networks:
+      - data_network
 
   trino:
     image: "trinodb/trino:427"
     container_name: trino
     hostname: trino
+    env_file:
+      - .env
     deploy:
       resources:
         limits:
@@ -123,10 +116,8 @@ services:
           memory: 4G
           cpus: '2'
     depends_on:
-      hive-metastore:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
+      - iceberg-rest
+      - minio
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/v1/info/state"]
       interval: 10s
@@ -134,7 +125,7 @@ services:
       retries: 5
       start_period: 60s
     ports:
-      - "8080:8080"
+      - "8081:8080"
     volumes:
       - ./docker/trino:/etc/trino
       - trino_logs:/var/log/trino
@@ -142,13 +133,11 @@ services:
       - data_network
 
   spark-master:
-    build:
-      context: ./docker/spark
-      dockerfile: ./Dockerfile
+    image: tabulario/spark-iceberg:3.5.1_1.4.3
     container_name: "spark-master"
     environment:
       - SPARK_MODE=master
-      - SPARK_LOCAL_IP=spark-master
+      - SPARK_MASTER_HOST=spark-master
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://$(hostname):8080 || exit 1"]
       interval: 15s
@@ -156,22 +145,18 @@ services:
       retries: 5
       start_period: 60s
     depends_on:
-      hive-metastore:
+      iceberg-rest:
         condition: service_healthy
     ports:
       - "7077:7077"
-      - "8081:8080"
+      - "8082:8080"
     volumes:
-      - ./docker/spark/conf/:/opt/bitnami/spark/conf/
-      - spark_logs:/opt/bitnami/spark/logs
-      - ./docker/logrotate.conf:/etc/logrotate.d/spark
+      - spark_logs:/opt/spark/logs
     networks:
       - data_network
 
   spark-worker:
-    build:
-      context: ./docker/spark
-      dockerfile: ./Dockerfile
+    image: tabulario/spark-iceberg:3.5.1_1.4.3
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
@@ -180,8 +165,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./docker/spark/conf/:/opt/bitnami/spark/conf/
-      - spark_logs:/opt/bitnami/spark/logs
+      - spark_logs:/opt/spark/logs
     healthcheck:
       test: ["CMD-SHELL", "ps -ef | grep -v grep | grep 'org.apache.spark.deploy.worker.Worker' || exit 1"]
       interval: 15s
@@ -191,51 +175,12 @@ services:
     depends_on:
       spark-master:
         condition: service_healthy
-      hive-metastore:
+      iceberg-rest:
         condition: service_healthy
     networks:
       - data_network
     deploy:
       replicas: 2
-
-  spark-thrift-server:
-    build:
-      context: ./docker/spark
-      dockerfile: ./Dockerfile
-    container_name: "spark-thrift-server"
-    environment:
-      - SPARK_MODE=master
-      - SPARK_LOCAL_IP=spark-thrift-server
-      - HOME=/opt/bitnami/spark
-      - USER=spark
-    user: "1001"
-    healthcheck:
-      test: ["CMD-SHELL", "ps -ef | grep -v grep | grep 'HiveThriftServer2' || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 6
-      start_period: 60s
-    depends_on:
-      spark-master:
-        condition: service_healthy
-      hive-metastore:
-        condition: service_healthy
-    ports:
-      - "4040:4040"
-      - "10000:10000"
-    command: >
-      sh -c "
-        mkdir -p /opt/bitnami/spark/.ivy2/local /opt/bitnami/spark/tmp && 
-        touch /opt/bitnami/spark/tmp/nss_passwd && 
-        chmod -R 777 /opt/bitnami/spark/.ivy2 /opt/bitnami/spark/tmp && 
-        sleep 30 && 
-        ./sbin/start-thriftserver.sh --driver-java-options '-Dhive.metastore.uris=thrift://hive-metastore:9083 -DHADOOP_USER_NAME=spark' --master spark://spark-master:7077
-      "
-    volumes:
-      - ./docker/spark/conf/:/opt/bitnami/spark/conf/
-      - spark_logs:/opt/bitnami/spark/logs
-    networks:
-      - data_network
 
   metabase:
     image: metabase/metabase:v0.47.4
@@ -271,8 +216,6 @@ volumes:
   minio_data:
   spark_logs:
   trino_logs:
-  hive_logs:
-  metastore_logs:
   warehouse_data:
 
 networks:

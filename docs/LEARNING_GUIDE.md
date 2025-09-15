@@ -29,7 +29,7 @@ Source Data (CSV Seeds) → Bronze Layer (dbt) → Silver Layer (Spark) → Gold
 | **Apache Spark** | Big data processing | Efficient large-scale data transformations |
 | **dbt** | Data transformation framework | Version-controlled, testable SQL transformations |
 | **MinIO** | S3-compatible object storage | Cost-effective data lake storage |
-| **Hive Metastore** | Metadata management | Schema registry for data lake |
+| **Iceberg REST Catalog** | Metadata management | Fast, lightweight schema registry for data lake |
 | **Apache Iceberg** | ACID transactions for data lake | Reliable data versioning and updates |
 
 ### Supporting Infrastructure

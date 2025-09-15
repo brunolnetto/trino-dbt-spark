@@ -1,6 +1,13 @@
 # Include env file (API keys, DB creds, etc.)
 include .env
 
+# Color definitions for output
+BLUE := \033[34m
+GREEN := \033[32m
+RED := \033[31m
+YELLOW := \033[33m
+NC := \033[0m
+
 # Docker compose helper
 DOCKER_COMPOSE := docker-compose --env-file .env
 

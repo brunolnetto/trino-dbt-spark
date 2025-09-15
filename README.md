@@ -15,7 +15,7 @@ make up
 
 This project serves as a comprehensive learning resource for modern data engineering. Choose your learning path:
 
-### 🎯 [Learning Index](./LEARNING_INDEX.md) - Start Here!
+### 🎯 [Learning Index](./docs/LEARNING_INDEX.md) - Start Here!
 **Your complete guide to mastering this project** - includes learning paths for different experience levels and use cases.
 
 ### 📖 Core Learning Materials
@@ -61,7 +61,7 @@ This project implements a **Medallion Architecture** using multiple engines opti
 | **💾 MinIO** | S3-compatible object storage | Latest | High-performance object storage |
 | **🗄️ PostgreSQL** | Analytics data warehouse | 15 | Optimized for BI workloads |
 | **📊 Metabase** | Business intelligence platform | v0.47.4 | Self-service analytics & dashboards |
-| **🐝 Hive Metastore** | Metadata catalog | 3.0.0 | Schema registry for data lake |
+| **�️ Iceberg REST Catalog** | Metadata management | Latest | Fast, lightweight catalog for Iceberg tables |
 | **🚀 Enhanced Makefile** | Production orchestration system | Custom | Error handling, monitoring, logging, rollback |
 
 ## 🎯 What You'll Learn
@@ -122,7 +122,7 @@ This project uses the **Brazilian E-Commerce Public Dataset by Olist**, a real-w
 
 ### 🚀 Pipeline Orchestration
 
-This project includes a **production-ready orchestration system** with comprehensive monitoring, error handling, and operational capabilities. See the **[📋 Orchestration Guide](./ORCHESTRATION_GUIDE.md)** for detailed information about:
+This project includes a **production-ready orchestration system** with comprehensive monitoring, error handling, and operational capabilities. See the **[📋 Orchestration Guide](./docs/ORCHESTRATION_GUIDE.md)** for detailed information about:
 
 - **Error Handling**: Automatic backup creation, cleanup on failures, and rollback capabilities
 - **Monitoring**: Real-time pipeline monitoring, performance tracking, and detailed reporting
@@ -166,7 +166,7 @@ make up     # Start all services (wait 2-3 minutes for health checks)
 |---------|------|---------|--------------|-----------|
 | **PostgreSQL** | 5432 | Data warehouse & metadata | `pg_isready` | 2GB RAM, 2 CPU |
 | **MinIO** | 9000/9001 | Object storage (S3-compatible) | `/minio/health/live` | Default |
-| **Hive Metastore** | 9083 | Schema registry | `nc -z localhost 9083` | 4GB RAM, 2 CPU |
+| **Iceberg REST** | 8181 | Metadata catalog | REST endpoint | Default |
 | **Trino** | 8080 | Query engine | `/v1/info/state` | 8GB RAM, 4 CPU |
 | **Spark Master** | 8081 | Spark cluster coordinator | `curl spark-master:8080` | Default |
 | **Spark Workers** | N/A | Distributed processing (2 replicas) | Process check | 2GB RAM, 1 CPU each |
@@ -525,10 +525,9 @@ trino-dbt-spark/
 │   ├── docker-compose.yml              # Multi-service orchestration
 │   ├── .env.template                   # Environment configuration template
 │   └── docker/                         # Service-specific configurations
-│       ├── hive-metastore/             # Metadata catalog setup
 │       ├── minio/                      # Object storage initialization
 │       ├── psql/                       # PostgreSQL init scripts
-│       ├── spark/                      # Custom Spark build & config
+│       ├── spark/                      # Spark configuration (legacy)
 │       └── trino/                      # Query engine configuration
 │
 ├── 📊 Analytics Project (dbt)

@@ -216,7 +216,9 @@ services:
   # Service dependency management
   trino:
     depends_on:
-      hive-metastore:
+      iceberg-rest:
+        condition: service_healthy
+      minio:
         condition: service_healthy
       
   # Health check patterns

@@ -23,11 +23,6 @@ load_config() {
     check_required_var "POSTGRES_USER" "$POSTGRES_USER"
     check_required_var "POSTGRES_DB" "$POSTGRES_DB"
 
-    # Metastore configuration
-    HIVE_METASTORE_USER=${HIVE_METASTORE_USER:-hive}
-    HIVE_METASTORE_PASSWORD=${HIVE_METASTORE_PASSWORD:-hive123}
-    HIVE_METASTORE_DB=${HIVE_METASTORE_DB:-metastore_db}
-
     # Metabase configuration
     MB_DB_USER=${MB_DB_USER:-metabase}
     MB_DB_PASS=${MB_DB_PASS:-metabase123}
@@ -36,10 +31,7 @@ load_config() {
 
 print_config() {
     log_info "Using configuration:"
-    echo "  📦 Metastore:"
-    echo "    - Database: $HIVE_METASTORE_DB"
-    echo "    - User: $HIVE_METASTORE_USER"
-    echo "  📊 Metabase:"
+    echo "   Metabase:"
     echo "    - Database: $MB_DB_DBNAME"
     echo "    - User: $MB_DB_USER"
 }
@@ -110,15 +102,6 @@ EOF
     log_success "$description initialization completed"
 }
 
-# Initialize Hive Metastore database
-initialize_metastore() {
-    initialize_database_pipeline \
-        "${HIVE_METASTORE_DB}" \
-        "${HIVE_METASTORE_USER}" \
-        "${HIVE_METASTORE_PASSWORD}" \
-        "Hive Metastore"
-}
-
 # Initialize Metabase database
 initialize_metabase() {
     initialize_database_pipeline \
@@ -126,6 +109,54 @@ initialize_metabase() {
         "${MB_DB_USER}" \
         "${MB_DB_PASS}" \
         "Metabase"
+}
+
+# Initialize Iceberg catalog database
+initialize_iceberg_catalog() {
+    local iceberg_db="iceberg_catalog"
+    local iceberg_user="${POSTGRES_USER}"
+    
+    log_info "Initializing Iceberg catalog database..."
+    
+    # Create the database if it doesn't exist
+    if ! psql -lqt | cut -d \| -f 1 | grep -qw "$iceberg_db"; then
+        log_info "Creating database $iceberg_db..."
+        psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOF
+            CREATE DATABASE $iceberg_db;
+EOF
+    else
+        log_info "Database $iceberg_db already exists"
+    fi
+    
+    # Initialize Iceberg metadata tables
+    log_info "Creating Iceberg metadata tables..."
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$iceberg_db" <<-EOF
+        -- Iceberg catalog metadata tables
+        CREATE TABLE IF NOT EXISTS iceberg_tables (
+            catalog_name VARCHAR(255) NOT NULL,
+            table_namespace VARCHAR(255) NOT NULL,
+            table_name VARCHAR(255) NOT NULL,
+            metadata_location VARCHAR(1000),
+            previous_metadata_location VARCHAR(1000),
+            PRIMARY KEY (catalog_name, table_namespace, table_name)
+        );
+        
+        CREATE TABLE IF NOT EXISTS iceberg_namespace_properties (
+            catalog_name VARCHAR(255) NOT NULL,
+            namespace VARCHAR(255) NOT NULL,
+            property_key VARCHAR(255),
+            property_value VARCHAR(1000),
+            PRIMARY KEY (catalog_name, namespace, property_key)
+        );
+        
+        -- Create indexes for better performance
+        CREATE INDEX IF NOT EXISTS idx_iceberg_tables_namespace 
+            ON iceberg_tables (catalog_name, table_namespace);
+        CREATE INDEX IF NOT EXISTS idx_iceberg_tables_name 
+            ON iceberg_tables (catalog_name, table_namespace, table_name);
+EOF
+    
+    log_success "Iceberg catalog initialization completed"
 }
 
 # Main initialization process
@@ -144,15 +175,15 @@ main() {
         exit 1
     }
     
-    # Step 2: Initialize Hive Metastore
-    initialize_metastore || {
-        log_error "Failed to initialize Hive Metastore"
+    # Step 2: Initialize Metabase
+    initialize_metabase || {
+        log_error "Failed to initialize Metabase"
         exit 1
     }
     
-    # Step 3: Initialize Metabase
-    initialize_metabase || {
-        log_error "Failed to initialize Metabase"
+    # Step 3: Initialize Iceberg catalog
+    initialize_iceberg_catalog || {
+        log_error "Failed to initialize Iceberg catalog"
         exit 1
     }
     

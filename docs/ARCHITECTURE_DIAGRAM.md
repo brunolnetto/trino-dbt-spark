@@ -64,6 +64,7 @@ This project demonstrates a **production-ready multi-engine data engineering arc
 │bronze       │        │Port: 8081      │      │Port: 10000     │      │Port: 5432      │
 │Method: spark│        │DB: warehouse   │      │Method: thrift  │      │DB: analytics   │
 └─────────────┘        └─────────────────┘      └─────────────────┘      └─────────────────┘
+```
 
 ## 💡 Key Technical Innovations
 
@@ -143,11 +144,11 @@ make run_all  # ~10 min: Execute full pipeline
 
 ## 📊 Success Metrics
 
-- **✅ Seed Ingestion**: CSV → dbt → Spark/Trino
-- **✅ Bronze Layer**: Trino → Iceberg (100K+ records)
-- **✅ Silver Layer**: Spark → Complex joins & cleaning
-- **✅ Gold Layer**: PostgreSQL → Analytics aggregations
-- **✅ BI Integration**: Metabase → Self-service dashboards
+**✅ Seed Ingestion**: CSV → dbt → Spark/Trino
+**✅ Bronze Layer**: Trino → Iceberg (100K+ records)
+**✅ Silver Layer**: Spark → Complex joins & cleaning
+**✅ Gold Layer**: PostgreSQL → Analytics aggregations
+**✅ BI Integration**: Metabase → Self-service dashboards
 
 ---
 

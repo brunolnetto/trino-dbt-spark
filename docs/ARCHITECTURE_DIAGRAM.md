@@ -1,6 +1,6 @@
 # 🏗️ Multi-Engine Data Engineering Architecture
 
-## Architecture Overview for Andreas Kretz
+## Architecture Overview
 
 This project demonstrates a **production-ready multi-engine data engineering architecture** that seamlessly integrates **dbt**, **Trino**, and **Spark** following the **Medallion Architecture** pattern.
 

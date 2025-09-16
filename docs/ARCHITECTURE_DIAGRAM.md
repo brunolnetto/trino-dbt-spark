@@ -133,11 +133,11 @@ profiles:
 
 This architecture demonstrates:
 
-✅ **Real-world Patterns**: Production-ready multi-engine setup
-✅ **Modern Stack**: Latest tools (Iceberg, dbt 1.10+, Trino 427)
-✅ **Best Practices**: Testing, documentation, monitoring
-✅ **Scalability**: Independent scaling per layer
-✅ **Flexibility**: Engine optimization per workload
+   - ✅ **Real-world Patterns**: Production-ready multi-engine setup
+   - ✅ **Modern Stack**: Latest tools (Iceberg, dbt 1.10+, Trino 427)
+   - ✅ **Best Practices**: Testing, documentation, monitoring
+   - ✅ **Scalability**: Independent scaling per layer
+   - ✅ **Flexibility**: Engine optimization per workload
 
 ## 🚀 Getting Started
 
@@ -150,11 +150,11 @@ make run_all  # ~10 min: Execute full pipeline
 
 ## 📊 Success Metrics
 
-**✅ Seed Ingestion**: CSV → dbt → Spark/Trino
-**✅ Bronze Layer**: Trino → Iceberg (100K+ records)
-**✅ Silver Layer**: Spark → Complex joins & cleaning
-**✅ Gold Layer**: PostgreSQL → Analytics aggregations
-**✅ BI Integration**: Metabase → Self-service dashboards
+  - **✅ Seed Ingestion**: CSV → dbt → Spark/Trino
+  - **✅ Bronze Layer**: Trino → Iceberg (100K+ records)   
+  - **✅ Silver Layer**: Spark → Complex joins & cleaning  
+  - **✅ Gold Layer**: PostgreSQL → Analytics aggregations
+  - **✅ BI Integration**: Metabase → Self-service dashboards
 
 ---
 
